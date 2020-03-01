@@ -4,7 +4,7 @@
 @Author       : LI Jinjie
 @Date         : 2020-02-29 10:06:11
 @LastEditors  : LI Jinjie
-@LastEditTime : 2020-02-29 18:22:23
+@LastEditTime : 2020-03-01 09:26:04
 @Units        : meters
 @Description  : apriltag map, 左下角为零点，向右递增，满格换行继续从左向右
 @Dependencies : None
@@ -34,16 +34,16 @@ def get_coordinates(tag_id):
     dxy = (SIDE_LENGTH / 2) * (4 / 5)
 
     # order: lb-rb-rt-lt
-    mf_coordinates = np.zeros((4, 2), dtype='float')
+    mf_coordinates = np.zeros((4, 3), dtype='float')
 
     # coordinates of left bottom point
-    mf_coordinates[0, :] = (x_center-dxy, y_center-dxy)
+    mf_coordinates[0, :] = (x_center-dxy, y_center-dxy, 0)
     # coordinates of right bottom point
-    mf_coordinates[1, :] = (x_center+dxy, y_center-dxy)
+    mf_coordinates[1, :] = (x_center+dxy, y_center-dxy, 0)
     # coordinates of right top point
-    mf_coordinates[2, :] = (x_center+dxy, y_center+dxy)
+    mf_coordinates[2, :] = (x_center+dxy, y_center+dxy, 0)
     # coordinates of left top point
-    mf_coordinates[3, :] = (x_center-dxy, y_center+dxy)
+    mf_coordinates[3, :] = (x_center-dxy, y_center+dxy, 0)
 
     dict_coordinators = {'center': np.array(
         (x_center, y_center), dtype='float'), 'lb-rb-rt-lt': mf_coordinates}
