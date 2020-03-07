@@ -4,18 +4,17 @@
 @Author       : LI Jinjie
 @Date         : 2020-02-25 17:31:23
 @LastEditors  : LI Jinjie
-@LastEditTime : 2020-03-07 15:04:30
+@LastEditTime : 2020-03-07 15:15:06
 @Units        : None
 @Description  : test solvePnP(), problems: 1. xy坐标系的符号是相反的 2. 如果一开始图像缩放了，各种参数都需要改变。
 @Dependencies : None
 @NOTICE       : None
 '''
-
+import math
 import cv2
 import numpy as np
 from apriltag import apriltag
 import tools as tl
-import math
 
 H_FOV = math.pi*(65/180)  # unit: radius
 
