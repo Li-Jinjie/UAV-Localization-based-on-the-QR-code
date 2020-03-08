@@ -4,7 +4,7 @@
 @Author       : LI Jinjie
 @Date         : 2020-03-07 15:13:02
 @LastEditors  : LI Jinjie
-@LastEditTime : 2020-03-08 11:05:23
+@LastEditTime : 2020-03-08 17:04:25
 @Units        : None
 @Description  : Please read the paper: "Flexible Layouts for Fiducial Tags" by Maximilian K. .etc
 @Dependencies : None
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     SMALL_IMG_SHAPE = (360, 640)
 
     # STEP 0: get image
-    strFilePath = 'Raw_pictures/QRcode_1.jpg'   # QRcode_1.jpg  image5.png
+    strFilePath = 'Raw_pictures/image5.png'   # QRcode_1.jpg  image5.png
     imgOrg = cv2.imread(strFilePath, flags=cv2.IMREAD_GRAYSCALE)
 
     # STEP 1: get the image coordinates of QR code
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     # ==========================================
     # b) Find contours.  RETR_EXTERNAL: Only external contours.
     _, contours, _ = cv2.findContours(
-        imgMor, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # CHAIN_APPROX_NONE(save all points), CHAIN_APPROX_SIMPLE
+        imgMor, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)  # CHAIN_APPROX_NONE(save all points), CHAIN_APPROX_SIMPLE
 
     # The points in the contour is continuous, so there's no need to sort.
 
@@ -66,58 +66,74 @@ if __name__ == "__main__":
     imgOnlyContours = np.zeros(SMALL_IMG_SHAPE, dtype=np.uint8)
     cv2.drawContours(imgOnlyContours, contours, -1, 255, -1)
     harrisV = cv2.cornerHarris(imgOnlyContours, 2, 3, 0.04)
+    # HarrisV存储的是计算出的harris值，
 
+    # ------------------------------------
+    # 这一步目前是多余的，但为了拓展自写harris计算，保留了harrisVOnContours
     # Choose harris values on the contours
     imgOnlyContours = np.zeros(SMALL_IMG_SHAPE, dtype=np.uint8)
     cv2.drawContours(imgOnlyContours, contours, -1, 1, 1)
     harrisVOnContours = harrisV * imgOnlyContours
-
-    harrisVMax = harrisVOnContours.max()
-    harrisVOnContours[harrisVOnContours < 0.05*harrisVMax] = 0  # (2)
+    # ------------------------------
 
     # find corner points in every contour
     cornersList = []
     for contour in contours:
+        maxHarrisV = 0
+        for point in contour:
+            tmp = harrisVOnContours[point[0, 1]][point[0, 0]]
+            if maxHarrisV < tmp:
+                maxHarrisV = tmp
+        del tmp
 
         # Collect corner points
         pointsList = []
         for point in contour:
-            row = point[0, 1]  # 这里的返回值好像得反一下才对
+            row = point[0, 1]  # pay attention to the order of the coordinates
             column = point[0, 0]
-            if harrisVOnContours[row][column] != 0:  # is corner
-                # save the coordinate and value
+            # is corner
+            if harrisVOnContours[row][column] > (0.01 * maxHarrisV):
                 pointsList.append(
                     (row, column, harrisVOnContours[row][column]))
             else:
                 pass
 
-        # Choose the point with max harrisV from several nearby points
-        i = 0
-        while(i != len(pointsList)-1):
-            mhtDist = abs(pointsList[i][0]-pointsList[i+1][0]) + \
-                abs(pointsList[i][1]-pointsList[i+1][1])
-            if mhtDist < 6:
-                if pointsList[i][2] < pointsList[i+1][2]:
-                    del pointsList[i]
+        if len(pointsList) < 4:
+            pass
+        else:
+            # Choose the point with max harrisV from several nearby points (nearby: manhattan Distance < 6)
+            i = 0
+            while(i != len(pointsList)-1):
+                mhtDist = abs(pointsList[i][0]-pointsList[i+1][0]) + \
+                    abs(pointsList[i][1]-pointsList[i+1][1])
+                if mhtDist < 6:
+                    if pointsList[i][2] < pointsList[i+1][2]:
+                        del pointsList[i]
+                    else:
+                        del pointsList[i]
+                    i = i-1
                 else:
-                    del pointsList[i]
-                i = i-1
-            else:
-                pass
+                    pass
 
-            i = i+1
+                i = i+1
 
         if len(pointsList) < 4:
             pass
         else:
-            pointsAry = np.array(pointsList, dtype=np.uint8)[:, :-1]
+            pointsAry = np.array(pointsList, dtype=int)[:, :-1]
             if len(pointsList) == 4:
                 cornersList.append(pointsAry)
             else:
                 # 我现在要过滤成四个点。
                 cornersList.append(pointsAry)
 
-    cv2.imshow('imgOnlyContours', imgOnlyContours)
-    cv2.imshow('imgSmall', imgSmall)
+    imgCorner = np.copy(imgSmall)
+    for corners in cornersList:
+        for corner in corners:
+            imgCorner[corner[0]][corner[1]] = 255
+
+    cv2.imshow('imgCorner', imgCorner)
+    # cv2.imshow('imgOnlyContours', imgOnlyContours)
+    # cv2.imshow('imgSmall', imgSmall)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
