@@ -1,3 +1,15 @@
+#!/usr/bin/env python
+# coding=utf-8
+'''
+@Author       : LI Jinjie
+@Date         : 2020-03-30 10:20:50
+@LastEditors  : LI Jinjie
+@LastEditTime : 2020-03-31 10:22:03
+@Units        : None
+@Description  : this script creates a list to store tag36h11 data
+@Dependencies : None
+@NOTICE       : None
+'''
 import numpy as np
 
 

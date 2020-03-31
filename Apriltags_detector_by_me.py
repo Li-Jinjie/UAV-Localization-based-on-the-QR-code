@@ -4,10 +4,10 @@
 @Author       : LI Jinjie
 @Date         : 2020-03-07 15:13:02
 @LastEditors  : LI Jinjie
-@LastEditTime : 2020-03-31 10:09:49
+@LastEditTime : 2020-03-31 10:20:11
 @Units        : None
 @Description  : Please read the paper: "Flexible Layouts for Fiducial Tags" by Maximilian K. .etc
-@Dependencies : None
+@Dependencies : opencv-python, tag36h11.py
 @NOTICE       : None
 '''
 import cv2
