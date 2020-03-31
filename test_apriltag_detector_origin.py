@@ -4,7 +4,7 @@
 @Author       : LI Jinjie
 @Date         : 2020-02-25 17:31:23
 @LastEditors  : LI Jinjie
-@LastEditTime : 2020-03-07 15:15:06
+@LastEditTime : 2020-03-30 19:37:04
 @Units        : None
 @Description  : test solvePnP(), problems: 1. xy坐标系的符号是相反的 2. 如果一开始图像缩放了，各种参数都需要改变。
 @Dependencies : None
@@ -18,7 +18,7 @@ import tools as tl
 
 H_FOV = math.pi*(65/180)  # unit: radius
 
-imagepath = 'Raw_pictures/image5.png'
+imagepath = 'Raw_pictures/image2.png'
 image = cv2.imread(imagepath, cv2.IMREAD_GRAYSCALE)
 imWidth = image.shape[1]
 imHeight = image.shape[0]

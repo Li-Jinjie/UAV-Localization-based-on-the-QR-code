@@ -4,9 +4,9 @@
 @Author       : LI Jinjie
 @Date         : 2020-03-07 15:13:02
 @LastEditors  : LI Jinjie
-@LastEditTime : 2020-03-08 10:45:49
+@LastEditTime : 2020-03-08 17:12:43
 @Units        : None
-@Description  : Please read the paper: "Flexible Layouts for Fiducial Tags" by Maximilian K. .etc
+@Description  : Please read the paper: "Flexible Layouts for Fiducial Tags" by Maximilian K. .etc.
 @Dependencies : None
 @NOTICE       : None
 '''
