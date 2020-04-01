@@ -4,7 +4,7 @@
 @Author       : LI Jinjie
 @Date         : 2020-03-07 15:13:02
 @LastEditors  : LI Jinjie
-@LastEditTime : 2020-03-31 10:20:11
+@LastEditTime : 2020-04-01 11:28:56
 @Units        : None
 @Description  : Please read the paper: "Flexible Layouts for Fiducial Tags" by Maximilian K. .etc
 @Dependencies : opencv-python, tag36h11.py
@@ -46,16 +46,16 @@ class tags_detector:
         # The points in the contour is continuous, so there's no need to sort.
 
         # c) Find corners
-        # Next, we need to find the corner points. There are three ways:
+        # Next, we need to find the corner points. There are four ways:
         # 1. cv2.approxPolyDP() with Ramer–Douglas–Peucker algorithm. Simplest, so I choose this method.
-        # 2. In cv2.findContours(), choose "CV_CHAIN_APPROX_SIMPLE"  --- low precision
+        # 2. use method from apriltags papers
         # 3. Hough transfer.
         # 4. Use Harris to calculate detect the corner points.
         self.cornersList = self.find_corners(self.contours)
 
         # d) Perspective transform
         self.tagsList = self.perspective_transform(
-            self.imgBlackWhite, self.cornersList)
+            self.imgSmall, self.cornersList)
 
         # STEP 2 : apriltag decoding
         # a) save data of tag36h11 in __init__()
@@ -119,13 +119,15 @@ class tags_detector:
 
         return False, 0
 
-    def perspective_transform(self, imgBlackWhite, cornersList):
+    def perspective_transform(self, imgSmall, cornersList):
         tagsList = []
         points2 = np.array([[0, 0], [0, 80], [80, 80], [80, 0]])
         for corners in cornersList:
             h, status = cv2.findHomography(corners, points2)
-            QRcode = cv2.warpPerspective(imgBlackWhite, h, (80, 80))
-            _, QRcode = cv2.threshold(QRcode, 200, 255, cv2.THRESH_BINARY)
+            QRcode = cv2.warpPerspective(imgSmall, h, (80, 80))
+
+            _, QRcode = cv2.threshold(
+                QRcode, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
             QRcodeSmall = cv2.resize(QRcode, (8, 8), dst=cv2.INTER_NEAREST)
             tagsList.append(QRcodeSmall)
         return tagsList
@@ -170,8 +172,6 @@ class tags_detector:
             rotate_dgree += 90
 
         return hammingMin, idMin, rotate_dgree
-
-    # def bin_to_int()
 
 
 if __name__ == "__main__":
