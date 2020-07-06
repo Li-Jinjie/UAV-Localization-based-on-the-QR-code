@@ -1,22 +1,19 @@
 # UAV-Localization-based-on-the-QR-code
-This repository stores the code of the localization part of a multi UAVs formation project.
+This repository stores the code of the localization part of a multi UAVs formation project. 
 
-### Overview
+Dependency: opencv-python
 
-本项目的目的是实现基于二维码的定位功能。
+The code is stored in the file: Apriltags_detector_by_me.py, including the detection part and the decoding part.
+The detection part can tell the pixel coordinations of four corners of every AprilTag in the image, and the decoding part can tell the id of each tag.
+If you want to get the tags' world coordinations, you need to finish the process from the id to coordinations based on the tags map you defined.
 
-| 名称     | 型号或版本                                                                    |
-| -------- | ----------------------------------------------------------------------------- |
-| 硬件平台 | 树莓派3B+和4B                                                                 |
-| 操作系统 | Raspbian Buster with desktop and recommended software，September 2019 Version |
-| 摄像头   | Raspberry Pi Camera                                                           |
-| OpenCV   | 4.1.0                                                                         |
+My detection process has six steps, they are:
+1. Image preprocessing
+2. Thresholding and morphological processing (open)
+3. Finding the contours
+4. Finding the corners in the contours and filter unsatisfied contours
+5. Perspective correction and thresholding again
+6. Downsampling the tags to 8 x 8
 
-贡献者：LJJ。
-
-| 文件夹名称   | 作用                     |
-| ------------ | ------------------------ |
-| Raw_pictures | 存放摄像头拍摄的原始图像 |
-| Results      | 存放处理之后的图像       |
-| Source_code  | 存放python代码           |
-
+Finally I test the performance of this process compared with the origin algorithm in [here](https://april.eecs.umich.edu/software/apriltag.html).
+The origin algorithm is more accurate and faster when the image is very complex or very small (the width is less than 360 pixels), but my code can be far more faster in simple environment (especially in the simulated environment like gazebo). 
