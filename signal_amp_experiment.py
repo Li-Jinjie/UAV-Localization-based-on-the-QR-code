@@ -14,22 +14,22 @@ import numpy as np
 import time
 
 
-# def main():
-#     img = np.ones([1080, 1920], dtype=np.uint8) * 120
-#     delta_L = 1
-#     sign = 1
-#     tmp = 0
-#     time_start = time.time()
-#     while True:
-#         tmp += 1
-#         sign = -sign
-#         img[:, 960:] = img[:, 960:] + sign * delta_L
-#         cv2.imshow("Image", img)
-#         cv2.waitKey(int(5))
-#         # if tmp == 100:
-#         #     time_end = time.time()
-#         #     break
-#     print("Processing time for one round is", (time_end - time_start)/100)
+def main():
+    img = np.ones([1080, 1920], dtype=np.uint8) * 120
+    delta_L = 1
+    sign = 1
+    tmp = 0
+    time_start = time.time()
+    while True:
+        tmp += 1
+        sign = -sign
+        img[:, 960:] = img[:, 960:] + sign * delta_L
+        cv2.imshow("Image", img)
+        cv2.waitKey(int(5))
+        # if tmp == 100:
+        #     time_end = time.time()
+        #     break
+    print("Processing time for one round is", (time_end - time_start)/100)
 
 def freq_30_to_60():
     video_name = 'test_videos/map_record.mp4'
@@ -56,4 +56,5 @@ def freq_30_to_60():
 
 if __name__ == "__main__":
     # freq_30_to_60()
+    main()
 
