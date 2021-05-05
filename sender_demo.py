@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 '''
 Author: LI Jinjie
-File: signal_amp_experiment.py
+File: sender_demo.py
 Date: 2021/5/4 20:48
 LastEditors: LI Jinjie
 LastEditTime: 2021/5/4 20:48
@@ -40,7 +40,7 @@ def main():
     # cv2.imshow("a", mask * 255)
     # cv2.waitKey(0)
 
-    DELTA_L = 4  # an essential value
+    DELTA_L = 8  # an essential value
     sign = 1
     tmp = 0
     time_start = time.time()
