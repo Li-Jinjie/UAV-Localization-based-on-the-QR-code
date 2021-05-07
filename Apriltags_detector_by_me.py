@@ -40,7 +40,7 @@ class tags_detector:
             self.imgOrg, self.SMALL_IMG_SHAPE)
 
         # b) Find contours.
-        _, self.contours, _ = cv2.findContours(
+        _, self.contours = cv2.findContours(
             self.imgMor, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # CHAIN_APPROX_SIMPLE: save necessary points; RETR_EXTERNAL: Only external contours.
         # The points in the contour is continuous, so there's no need to sort.
