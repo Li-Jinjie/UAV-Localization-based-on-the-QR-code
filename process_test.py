@@ -112,37 +112,45 @@ if __name__ == '__main__':
                 j = j + 1
         i = i + 1
 
-    for rect in rectangleList:
-        cv2.rectangle(img, (rect[0][0], rect[0][1]), (rect[1][0], rect[1][1]), 255)
-    cv2.imshow("imgWithPoints", img)
-    cv2.waitKey(0)
+    # # ======= to display =========
+    # imgPoints = img.copy()
+    # for rect in rectangleList:
+    #     cv2.rectangle(imgPoints, (rect[0][0], rect[0][1]), (rect[1][0], rect[1][1]), 255)
+    # cv2.imshow("imgWithPoints", imgPoints)
+    # cv2.waitKey(0)
 
     # (3) 得到矩形四个点的坐标
     tagCornersList = []  # 4 * 2
-    for rect in rectangleList:
-        tagCorners = np.zeros([4, 2])
+    for rect in rectangleList:  # each rectangle
+        tagCorners = np.zeros([4, 1, 2], dtype=np.int32)
         lt = rect[0]
         rb = rect[1]
         rt = np.array([rb.item(0), lt.item(1)])
         lb = np.array([lt.item(0), rb.item(1)])
-        rect_corners = [lt, rb, rt, lb]
+        rect_corners = [lt, rt, rb, lb]
 
-        for corners in cornersList:
-            # if in the rectangle
-            if (lt.item(0) <= corners[0, 0, 0] <= rb.item(0)) and (lt.item(1) <= corners[0, 0, 1] <= rb.item(1)):
-                for corner in corners:
-                    dis_min = 9999
-                    idx_min = -1
-                    for idx, pts in enumerate(rect_corners):
+        for idx, pts in enumerate(rect_corners):  # each point of a rectangle
+            distance_min = 9999
+            for corners in cornersList:
+                # if in the rectangle
+                if (lt.item(0) <= corners[0, 0, 0] <= rb.item(0)) and (lt.item(1) <= corners[0, 0, 1] <= rb.item(1)):
+                    for corner in corners:
                         distance = np.sum(np.abs(pts - corner))  # Manhattan Distance
-                        if distance < dis_min:
-                            dis_min = distance
-                            idx_min = idx
+                        if distance < distance_min:
+                            distance_min = distance
+                            tagCorners[idx, 0, :] = corner
+                else:
+                    continue
 
+        tagCornersList.append(tagCorners)
 
-
-            else:
-                continue
+    # # ======= to display =========
+    # imgPolyLines = img.copy()
+    # for tagCorners in tagCornersList:
+    #     cv2.polylines(imgPolyLines, [tagCorners], True, 255)
+    # cv2.imshow("imgWithPoints", imgPolyLines)
+    # cv2.waitKey(0)
+    pass
 
 # e) Convex Hull
 
