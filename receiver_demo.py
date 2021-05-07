@@ -15,9 +15,10 @@ import time
 import copy
 from Apriltags_detector_by_me import tags_detector
 
+
 def main():
     # ===== open a video =======
-    video_name = 'capture_videos/big_tag_1.mov'
+    video_name = 'capture_videos/square_L2.mov'
     cap = cv2.VideoCapture(video_name)
     org_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     org_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -30,6 +31,8 @@ def main():
 
     org_frame_lightness = np.zeros([int(org_height), int(org_width)], dtype=np.uint8)
     last_frame_bgr = np.zeros([int(org_height), int(org_width), 3], dtype=np.uint8)
+
+    last_code_img = np.zeros([int(org_height), int(org_width)], dtype=np.uint8)
     print("Processing......")
     while cap.isOpened():
         ret, frame = cap.read()
@@ -38,10 +41,9 @@ def main():
             # ====== LAB =====
             frame_Lab = cv2.cvtColor(frame, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
 
-
-
             frame_now_d = frame_Lab[:, :, 0].astype(np.int32)
             frame_last_d = org_frame_lightness.astype(np.int32)
+            org_frame_lightness = frame_Lab[:, :, 0]
 
             # code_img = frame_Lab[:, :, 0] - org_frame_lightness
             sub_img = frame_now_d - frame_last_d
@@ -49,12 +51,15 @@ def main():
             code_img_lab = code_img_lab.astype(np.uint8)
 
             # ======== img processing =============
-            ret, code_img_BW = cv2.threshold(code_img_lab, 0, 255,  cv2.THRESH_OTSU)
+            ret, code_img_BW = cv2.threshold(code_img_lab, 0, 255, cv2.THRESH_OTSU)
 
-            cv2.imshow("code", code_img_lab)
-            cv2.waitKey(0)
+            print(tmp)
+            code_img_add = (code_img_lab.astype(np.int32) + last_code_img) / 2
+            code_img_add = (code_img_add - np.min(code_img_add)) * 255 / (np.max(code_img_add) - np.min(code_img_add))
+            last_code_img = code_img_lab.astype(np.int32)
 
-            org_frame_lightness = frame_Lab[:, :, 0]
+            # cv2.imshow("code_add", code_img_add.astype(np.uint8))
+            # cv2.waitKey(0)
 
             # ===== BGR ====
             # frame = frame.astype(np.double)
@@ -66,7 +71,12 @@ def main():
             #
             # code_img_bgr = code_img_bgr.astype(np.uint8)
 
-            if tmp == 0:
+            if tmp == 16:
+                cv2.imshow("code_add", code_img_add.astype(np.uint8))
+                cv2.waitKey(0)
+
+                cv2.imwrite("result_pictures/code_add.png", code_img_add.astype(np.uint8))
+
                 cv2.imshow("code_lab", code_img_lab)
                 cv2.imshow("code_BW", code_img_BW)
                 cv2.imshow("frame", frame)
