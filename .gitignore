@@ -131,3 +131,10 @@ dmypy.json
 .vscode/
 
 .idea/
+
+apriltag_map/Pictures/
+
+# videos
+*.mov
+*.avi
+*.mp4
