@@ -140,12 +140,12 @@ class tags_detector:
                         continue
 
             tagCornersList.append(tagCorners)
-            # # ======= to display =========
-            # imgPolyLines = img.copy()
-            # for tagCorners in tagCornersList:
-            #     cv2.polylines(imgPolyLines, [tagCorners], True, 255)
-            # cv2.imshow("imgWithPoints", imgPolyLines)
-            # cv2.waitKey(0)
+        # ======= to display =========
+        # imgPolyLines = img.copy()
+        # for tagCorners in tagCornersList:
+        #     cv2.polylines(imgPolyLines, [tagCorners], True, 255)
+        # cv2.imshow("imgWithPoints", imgPolyLines)
+        # cv2.waitKey(0)
 
         # Perspective transform
         self.tagsList = self._perspective_transform(imgBlackWhite, tagCornersList)
@@ -158,10 +158,21 @@ class tags_detector:
             # c) calculate the hamming distance and find the minimal one
             hamming, id, rotate_dgree = self._find_min_hamming(intCodeList, self.tag36h11List)
             # d) filter invalid code and append result
-            if hamming < 8:
-                lt_rt_rd_ld = np.rot90(self.cornersList[i], rotate_dgree / 90)
+            if hamming < 4:
+                lt_rt_rd_ld = np.rot90(tagCornersList[i], rotate_dgree / 90)
                 self.resultList.append(
                     {'id': id, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
+
+        imgFinal = img.copy()
+        for tagCorners in tagCornersList:
+            cv2.polylines(imgFinal, [tagCorners], True, 255)
+        for result in self.resultList:
+            text = "id:" + str(result["id"]) + " hamming:" + str(result["hamming"])
+            org = (result["lt_rt_rd_ld"][0, :].item(0), result["lt_rt_rd_ld"][0, :].item(1))
+            cv2.putText(imgFinal, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
+
+        cv2.imshow("imgWithPoints", imgFinal)
+        cv2.waitKey(0)
 
         # STEP 3 : update the flag
         if len(self.resultList) == 0:
@@ -194,8 +205,8 @@ class tags_detector:
             # cv2.waitKey(0)
 
             QRBlur = cv2.medianBlur(QRcode, 3)
-            cv2.imshow("QRBlur", QRBlur)
-            cv2.waitKey(0)
+            # cv2.imshow("QRBlur", QRBlur)
+            # cv2.waitKey(0)
 
             # QRBlur = cv2.medianBlur(QRBlur, 3)
             # cv2.imshow("QRBlur", QRBlur)
