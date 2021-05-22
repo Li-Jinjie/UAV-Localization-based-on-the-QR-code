@@ -138,3 +138,8 @@ apriltag_map/Pictures/
 *.mov
 *.avi
 *.mp4
+
+archives/
+receiver_pictures/
+receiver_videos/
+sender_videos/

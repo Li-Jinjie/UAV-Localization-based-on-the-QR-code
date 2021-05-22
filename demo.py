@@ -6,7 +6,7 @@
 @LastEditors  : LI Jinjie
 @LastEditTime : 2020-04-01 11:35:25
 @Units        : None
-@Description  : file content
+@Description  : a demo to use Apriltags_detector_by_me.py.
 @Dependencies : None
 @NOTICE       : None
 '''

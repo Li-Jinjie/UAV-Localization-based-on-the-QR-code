@@ -6,7 +6,8 @@
 @LastEditors  : LI Jinjie
 @LastEditTime : 2020-04-01 11:28:56
 @Units        : None
-@Description  : Please read the paper: "Flexible Layouts for Fiducial Tags" by Maximilian K. .etc
+@Description  : Please read the paper: "Flexible Layouts for Fiducial Tags" by Maximilian K. .etc This is the old
+AprilTags detector implemented by me.
 @Dependencies : opencv-python, tag36h11.py
 @NOTICE       : None
 '''
@@ -67,7 +68,7 @@ class tags_detector:
                 intCodeList, self.tag36h11List)
             # d) filter invalid code and append result
             if hamming < 8:
-                lt_rt_rd_ld = np.rot90(self.cornersList[i], rotate_dgree/90)
+                lt_rt_rd_ld = np.rot90(self.cornersList[i], rotate_dgree / 90)
                 self.resultList.append(
                     {'id': id, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
 
@@ -90,9 +91,9 @@ class tags_detector:
 
         # b) Threshold, I use Otsu's Binarization
         _, imgBlackWhite = cv2.threshold(
-            imgSmall, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        imgBlackWhite_r = 255*np.ones(SMALL_IMG_SHAPE, dtype=np.uint8) - \
-            imgBlackWhite  # reverse the color
+            imgSmall, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        imgBlackWhite_r = 255 * np.ones(SMALL_IMG_SHAPE, dtype=np.uint8) - \
+                          imgBlackWhite  # reverse the color
 
         # c) Morphology open, to remove some noise. 好像去掉了一些细节不知道对角点精度有没有影响，再想想
         kernel = np.ones((3, 3), np.uint8)
@@ -127,7 +128,7 @@ class tags_detector:
             QRcode = cv2.warpPerspective(imgSmall, h, (80, 80))
 
             _, QRcode = cv2.threshold(
-                QRcode, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+                QRcode, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             QRcodeSmall = cv2.resize(QRcode, (8, 8), dst=cv2.INTER_NEAREST)
             tagsList.append(QRcodeSmall)
         return tagsList
@@ -157,7 +158,7 @@ class tags_detector:
                 s = str(bin(intCode ^ tagCode))
                 hamming = 0
                 for i in range(2, len(s)):
-                    if int(s[i]) is 1:
+                    if int(s[i]) == 1:
                         hamming += 1
                 if hammingMinLocal > hamming:
                     hammingMinLocal = hamming
@@ -179,7 +180,7 @@ if __name__ == "__main__":
     SMALL_IMG_SHAPE = (360, 640)
 
     # STEP 0: get image
-    strFilePath = 'Raw_pictures/QRcode_1.jpg'   # QRcode_1.jpg  image5.png
+    strFilePath = 'Raw_pictures/QRcode_1.jpg'  # QRcode_1.jpg  image5.png
     imgOrg = cv2.imread(strFilePath, flags=cv2.IMREAD_GRAYSCALE)
     detector = tags_detector()
     flag, results = detector.detect(imgOrg, SMALL_IMG_SHAPE)
