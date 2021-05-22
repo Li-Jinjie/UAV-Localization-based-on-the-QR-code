@@ -17,7 +17,7 @@ import copy
 
 def main():
     # ===== make a new video =======
-    video_name = 'test_videos/output.avi'
+    video_name = 'sender_videos/output.avi'
     cap = cv2.VideoCapture(video_name)
     video_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     video_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -41,7 +41,7 @@ def main():
 
     # ======= record videos ============
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('test_videos/square_masked.avi', fourcc, 60.0, (int(width), int(height)))
+    out = cv2.VideoWriter('sender_videos/square_masked.avi', fourcc, 60.0, (int(width), int(height)))
 
     DELTA_L = 5  # an essential value
     sign = 1
@@ -89,13 +89,13 @@ def main():
 
 
 def freq_30_to_60():
-    video_name = 'test_videos/map_record.mp4'
+    video_name = 'sender_videos/map_record.mp4'
     cap = cv2.VideoCapture(video_name)
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('test_videos/output.avi', fourcc, 60.0, (int(width), int(height)))
+    out = cv2.VideoWriter('sender_videos/output.avi', fourcc, 60.0, (int(width), int(height)))
 
     while cap.isOpened():
         ret, frame = cap.read()
