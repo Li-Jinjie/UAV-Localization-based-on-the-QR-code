@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 '''
 Author: LI Jinjie
-File: process_test.py
+File: apriltags_detector_new.py
 Date: 2021/5/7 8:07
 LastEditors: LI Jinjie
 LastEditTime: 2021/5/7 8:07
@@ -14,7 +14,7 @@ import numpy as np
 from tag36h11 import tag36h11_create
 
 
-class tags_detector:
+class TagsDetector:
     cornersList = []
     tagsList = []
     resultList = []  # id, hamming_distance, rotate_degree
@@ -29,23 +29,29 @@ class tags_detector:
         self.tag36h11List, self.bit_x, self.bit_y = tag36h11_create()
 
     def detect(self, img):
-        _, imgBlackWhite = cv2.threshold(
-            img, 120, 255, cv2.THRESH_BINARY)
+        resultList = []  # id, hamming_distance, rotate_degree  should be refresh every time
+        # imgBW_adap = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 5, 3)
+        # imgBW_adap = 255 - imgBW_adap    # 自适应阈值效果很差。
+        # cv2.imshow("imgBW_adap", imgBW_adap)
 
+        _, imgBlackWhite = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)  # extremely critical
         imgBlackWhite = 255 - imgBlackWhite
         # cv2.imshow("imgBW", imgBlackWhite)
         # cv2.waitKey(0)
 
+        imgBlackWhite = cv2.medianBlur(imgBlackWhite, 5)
+
         # c) Morphology open, to remove some noise. 好像去掉了一些细节不知道对角点精度有没有影响，再想想
-        kernel = np.ones((3, 3), np.uint8)
+        kernel = np.ones((4, 4), np.uint8)
         imgMor = cv2.morphologyEx(imgBlackWhite, cv2.MORPH_OPEN, kernel)
 
-        imgMorOpen = imgMor.copy()
+        # imgMorOpen = imgMor.copy()
 
         kernel = np.ones((4, 4), np.uint8)  # need to adjust more carefully
         imgMor = cv2.morphologyEx(imgMor, cv2.MORPH_CLOSE, kernel)
+        # cv2.imshow("imgBW", imgBlackWhite)
         # cv2.imshow("imgMorOpen", imgMorOpen)
-        # cv2.imshow("imgMor", imgMor)
+        # cv2.imshow("imgMorClose", imgMor)
         # cv2.waitKey(0)
 
         # d) find contours and contour approximation
@@ -74,9 +80,9 @@ class tags_detector:
             rb = np.array([np.max(corners[:, 0, 0]), np.max(corners[:, 0, 1])])
             rectangleList.append(np.array([lt, rb]))
 
-            # for i in range(corners.shape[0]):
-            #     cv2.circle(img, (corners[i, 0, :].item(0), corners[i, 0, :].item(1)), 2, 255, -1)
-
+        #     # ====== to display ========
+        #     for i in range(corners.shape[0]):
+        #         cv2.circle(img, (corners[i, 0, :].item(0), corners[i, 0, :].item(1)), 2, 255, -1)
         # cv2.imshow("imgWithPoints", img)
         # cv2.waitKey(0)
 
@@ -160,13 +166,14 @@ class tags_detector:
             # d) filter invalid code and append result
             if hamming < 4:
                 lt_rt_rd_ld = np.rot90(tagCornersList[i], rotate_dgree / 90)
-                self.resultList.append(
+                resultList.append(
                     {'id': id, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
 
+        # ======= to display =========
         imgFinal = img.copy()
         for tagCorners in tagCornersList:
             cv2.polylines(imgFinal, [tagCorners], True, 255)
-        for result in self.resultList:
+        for result in resultList:
             text = "id:" + str(result["id"]) + " hamming:" + str(result["hamming"])
             org = (result["lt_rt_rd_ld"][0, :].item(0), result["lt_rt_rd_ld"][0, :].item(1))
             cv2.putText(imgFinal, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
@@ -175,12 +182,12 @@ class tags_detector:
         cv2.waitKey(0)
 
         # STEP 3 : update the flag
-        if len(self.resultList) == 0:
+        if len(resultList) == 0:
             self.tag_flag = False
         else:
             self.tag_flag = True
 
-        return self.tag_flag, self.resultList
+        return self.tag_flag, resultList
 
     def _perspective_transform(self, imgMor, cornersList):
 
@@ -252,7 +259,7 @@ class tags_detector:
                 s = str(bin(intCode ^ tagCode))
                 hamming = 0
                 for i in range(2, len(s)):
-                    if int(s[i]) is 1:
+                    if int(s[i]) == 1:
                         hamming += 1
                 if hammingMinLocal > hamming:
                     hammingMinLocal = hamming
@@ -270,8 +277,9 @@ class tags_detector:
 
 
 if __name__ == '__main__':
-    img = cv2.imread("result_pictures/L3_add_1.png", flags=cv2.IMREAD_GRAYSCALE)
-    detector = tags_detector()
+    # img = cv2.imread("receiver_pictures/L3_add_1.png", flags=cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread("receiver_pictures/0517_bw_120fps_90degree_720p.avi_lab_2.png", flags=cv2.IMREAD_GRAYSCALE)
+    detector = TagsDetector()
     flag, results = detector.detect(img)
 
     if flag == True:
