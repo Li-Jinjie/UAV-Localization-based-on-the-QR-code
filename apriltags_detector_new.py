@@ -36,8 +36,8 @@ class TagsDetector:
 
         _, imgBlackWhite = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)  # extremely critical
         imgBlackWhite = 255 - imgBlackWhite
-        # cv2.imshow("imgBW", imgBlackWhite)
-        # cv2.waitKey(0)
+        cv2.imshow("imgBW", imgBlackWhite)
+        cv2.waitKey(0)
 
         imgBlackWhite = cv2.medianBlur(imgBlackWhite, 5)
 

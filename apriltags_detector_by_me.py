@@ -16,7 +16,7 @@ import numpy as np
 from tag36h11 import tag36h11_create
 
 
-class tags_detector:
+class TagsDetector:
     cornersList = []
     tagsList = []
     resultList = []  # id, hamming_distance, rotate_degree
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     # STEP 0: get image
     strFilePath = 'Raw_pictures/QRcode_1.jpg'  # QRcode_1.jpg  image5.png
     imgOrg = cv2.imread(strFilePath, flags=cv2.IMREAD_GRAYSCALE)
-    detector = tags_detector()
+    detector = TagsDetector()
     flag, results = detector.detect(imgOrg, SMALL_IMG_SHAPE)
 
     if flag == True:
