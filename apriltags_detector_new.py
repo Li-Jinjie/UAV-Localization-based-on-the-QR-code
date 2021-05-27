@@ -11,7 +11,9 @@ Description: a new AprilTag detector class
 
 import cv2
 import numpy as np
+import math
 from tag36h11 import tag36h11_create
+from apriltag import apriltag
 
 
 class TagsDetector:
@@ -27,6 +29,7 @@ class TagsDetector:
 
     def __init__(self):
         self.tag36h11List, self.bit_x, self.bit_y = tag36h11_create()
+        self.reverse_flag = -1
 
     def detect(self, img):
         resultList = []  # id, hamming_distance, rotate_degree  should be refresh every time
@@ -35,9 +38,10 @@ class TagsDetector:
         # cv2.imshow("imgBW_adap", imgBW_adap)
 
         _, imgBlackWhite = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)  # extremely critical
-        imgBlackWhite = 255 - imgBlackWhite
-        cv2.imshow("imgBW", imgBlackWhite)
-        cv2.waitKey(0)
+        if self.reverse_flag == 1:
+            imgBlackWhite = 255 - imgBlackWhite
+        # cv2.imshow("imgBW", imgBlackWhite)
+        # cv2.waitKey(0)
 
         imgBlackWhite = cv2.medianBlur(imgBlackWhite, 5)
 
@@ -45,14 +49,36 @@ class TagsDetector:
         kernel = np.ones((4, 4), np.uint8)
         imgMor = cv2.morphologyEx(imgBlackWhite, cv2.MORPH_OPEN, kernel)
 
-        # imgMorOpen = imgMor.copy()
+        imgMorOpen = imgMor.copy()
 
         kernel = np.ones((4, 4), np.uint8)  # need to adjust more carefully
         imgMor = cv2.morphologyEx(imgMor, cv2.MORPH_CLOSE, kernel)
         # cv2.imshow("imgBW", imgBlackWhite)
         # cv2.imshow("imgMorOpen", imgMorOpen)
-        # cv2.imshow("imgMorClose", imgMor)
+        cv2.imshow("imgMorClose", imgMor)
+        cv2.waitKey(0)
+
+        # # HoughLines test
+        # imgEdge = cv2.Canny(imgMor, 50, 150, apertureSize=3)
+        # lines = cv2.HoughLines(imgEdge, 1, np.pi / 180, 120, None, 0, 0)
+        #
+        # if lines is not None:
+        #     for i in range(0, len(lines)):
+        #         rho = lines[i][0][0]
+        #         theta = lines[i][0][1]
+        #         a = math.cos(theta)
+        #         b = math.sin(theta)
+        #         x0 = a * rho
+        #         y0 = b * rho
+        #         pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
+        #         pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
+        #         cv2.line(imgBlackWhite, pt1, pt2, 127, 3, cv2.LINE_AA)
+        # cv2.imshow("Canny", imgEdge)
+        # cv2.imshow("HoughLines", imgBlackWhite)
         # cv2.waitKey(0)
+
+
+
 
         # d) find contours and contour approximation
         contours, hierarchy = cv2.findContours(imgMor, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -80,7 +106,7 @@ class TagsDetector:
             rb = np.array([np.max(corners[:, 0, 0]), np.max(corners[:, 0, 1])])
             rectangleList.append(np.array([lt, rb]))
 
-        #     # ====== to display ========
+            # ====== to display ========
         #     for i in range(corners.shape[0]):
         #         cv2.circle(img, (corners[i, 0, :].item(0), corners[i, 0, :].item(1)), 2, 255, -1)
         # cv2.imshow("imgWithPoints", img)
@@ -186,6 +212,7 @@ class TagsDetector:
             self.tag_flag = False
         else:
             self.tag_flag = True
+            self.reverse_flag = -1 * self.reverse_flag
 
         return self.tag_flag, resultList
 

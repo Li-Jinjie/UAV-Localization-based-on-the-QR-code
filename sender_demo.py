@@ -23,7 +23,7 @@ def main():
     video_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
     # ======== apriltags map related ============
-    apriltag_map = cv2.imread('apriltag_map/apriltagMap_3x3_1920.0000m.png', flags=cv2.IMREAD_GRAYSCALE)
+    apriltag_map = cv2.imread('apriltag_map/apriltagMap_9x9_1920.0000m.png', flags=cv2.IMREAD_GRAYSCALE)
     [height, width] = apriltag_map.shape
     map_mask = np.zeros([height, width], dtype=np.int32)
     # white: 255 > 1 black: 0 > -1 no color: 127 > 0
@@ -39,15 +39,15 @@ def main():
     # cv2.imshow("a", mask * 255)
     # cv2.waitKey(0)
 
-    # ======= record videos ============
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('sender_videos/square_masked.avi', fourcc, 60.0, (int(width), int(height)))
-
-    DELTA_L = 5  # an essential value
+    DELTA_L = 3  # an essential value
     sign = 1
     tmp = 0
-    time_start = time.time()
 
+    # ======= record videos ============
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter('sender_videos/square_masked_9x9_L='+str(DELTA_L)+'.avi', fourcc, 60.0, (int(width), int(height)))
+
+    time_start = time.time()
     print("Processing......")
     while cap.isOpened():
         tmp += 1

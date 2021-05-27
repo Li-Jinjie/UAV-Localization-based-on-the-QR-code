@@ -20,7 +20,7 @@ def main():
     detector = TagsDetector()
     # ===== open a video =======
     path = 'receiver_videos/'
-    video_name = '0521_color_120fps_80d_720p.avi'
+    video_name = '0527_color_120fps_L=4_9x9_noLight_720p.avi'
     # video_name = '0517_color_120fps_80degree_720p.avi'
     cap = cv2.VideoCapture(path + video_name)
     org_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -41,31 +41,31 @@ def main():
         ret, frame = cap.read()
         if ret is True:
 
-            # ====== LAB =====
-
-            frame_Lab = cv2.cvtColor(frame, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
-            frame_now_d = frame_Lab[:, :, 0].astype(np.int32)
-            frame_last_d = org_frame_lightness.astype(np.int32)
-            org_frame_lightness = frame_Lab[:, :, 0]
-
-            # frame_gray = cv2.cvtColor(frame, code=cv2.COLOR_BGR2GRAY)  # transform from BGR to gray
-            # frame_now_d = frame_gray.astype(np.int32)
-            # frame_last_d = org_frame_lightness.astype(np.int32)
-            # org_frame_lightness = frame_gray
-
-            # code_img = frame_Lab[:, :, 0] - org_frame_lightness
-            sub_img = frame_now_d - frame_last_d
-            code_img_lab = (sub_img - np.min(sub_img)) * 255 / (np.max(sub_img) - np.min(sub_img))
-            code_img_lab = code_img_lab.astype(np.uint8)
-
-            # cv2.imshow("code_sub", code_img_lab)
-            # cv2.waitKey(0)
-
-
             # # ========== detect apriltags =============
-            if cnt > 250:
+            if cnt > 1000:
                 # cv2.imshow("code_org", frame)
                 # cv2.waitKey(0)
+
+                # ====== LAB =====
+
+                frame_Lab = cv2.cvtColor(frame, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
+                frame_now_d = frame_Lab[:, :, 0].astype(np.int32)
+                frame_last_d = org_frame_lightness.astype(np.int32)
+                org_frame_lightness = frame_Lab[:, :, 0]
+
+                # frame_gray = cv2.cvtColor(frame, code=cv2.COLOR_BGR2GRAY)  # transform from BGR to gray
+                # frame_now_d = frame_gray.astype(np.int32)
+                # frame_last_d = org_frame_lightness.astype(np.int32)
+                # org_frame_lightness = frame_gray
+
+                # code_img = frame_Lab[:, :, 0] - org_frame_lightness
+                sub_img = frame_now_d - frame_last_d
+                code_img_lab = (sub_img - np.min(sub_img)) * 255 / (np.max(sub_img) - np.min(sub_img))
+                code_img_lab = code_img_lab.astype(np.uint8)
+
+                cv2.imshow("code_sub", code_img_lab)
+                cv2.waitKey(0)
+
 
                 flag, results = detector.detect(code_img_lab)
                 if flag == True:
@@ -80,9 +80,9 @@ def main():
 
             print(cnt)
 
-            code_img_add = (code_img_lab.astype(np.int32) + last_code_img) / 2
-            code_img_add = (code_img_add - np.min(code_img_add)) * 255 / (np.max(code_img_add) - np.min(code_img_add))
-            last_code_img = code_img_lab.astype(np.int32)
+            # code_img_add = (code_img_lab.astype(np.int32) + last_code_img) / 2
+            # code_img_add = (code_img_add - np.min(code_img_add)) * 255 / (np.max(code_img_add) - np.min(code_img_add))
+            # last_code_img = code_img_lab.astype(np.int32)
 
             # cv2.imshow("code_add", code_img_add.astype(np.uint8))
             # cv2.waitKey(0)
