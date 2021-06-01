@@ -10,7 +10,7 @@ Description: file content
 '''
 import cv2
 import numpy as np
-from apriltags_detector_findContour import TagsDetector
+from projected_apriltag.detector import TagsDetector
 
 frame_1 = cv2.imread("experiments_data_real/receiver_pictures/1502.png")
 frame_Lab_1 = cv2.cvtColor(frame_1, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
@@ -67,9 +67,7 @@ for offset in range(-5, 5 + 1, 1):
 print('The final offset_y is:', offset_y)
 
 # translation
-x = offset_x
-y = offset_y
-M = np.float32([[1, 0, x], [0, 1, y]])
+M = np.float32([[1, 0, offset_x], [0, 1, offset_y]])
 frame_intense_2 = cv2.warpAffine(frame_intense_2.astype(np.uint8), M, (width, height))
 # cv2.imshow("trans_img", frame_intense_2)
 # cv2.waitKey(0)
@@ -77,6 +75,15 @@ frame_intense_2 = frame_intense_2.astype(np.int32)
 
 # code_img = frame_Lab[:, :, 0] - org_frame_lightness
 sub_img = frame_intense_2 - frame_intense_1
+
+offset_x = -6
+offset_y = -6
+# remove the black border
+sub_img[0:np.abs(offset_y), :] = 0
+sub_img[-np.abs(offset_y):, :] = 0
+sub_img[:, 0:np.abs(offset_x)] = 0
+sub_img[:, -np.abs(offset_x):] = 0
+
 code_img_lab = (sub_img - np.min(sub_img)) * 255 / (np.max(sub_img) - np.min(sub_img))
 code_img_lab = code_img_lab.astype(np.uint8)
 
@@ -87,7 +94,9 @@ cv2.waitKey(0)
 # cv2.imshow("code_org", frame)
 # cv2.waitKey(0)
 detector = TagsDetector()
-flag, results = detector.detect(code_img_lab)
+img = np.array([code_img_lab, code_img_lab, code_img_lab], dtype=np.uint8)
+img = img.transpose((1, 2, 0))
+flag, results = detector.detect(img)
 if flag == True:
     for i, result in enumerate(results):
         print(result)

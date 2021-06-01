@@ -11,20 +11,32 @@ Description: file content
 import numpy as np
 import cv2
 
+
 def preprocess(last_frame_lightness, img, reverse_flag):
-    # 1). convert BGR to Lab, alignment, subtraction, normalization
+    # 1) convert BGR to Lab, alignment, subtraction, normalization
     img_lab = cv2.cvtColor(img, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
     img_lightness = img_lab[:, :, 0].astype(np.int32)
 
+    # 2) align image and subtraction
     if last_frame_lightness is None:
         img_subtraction = img_lightness
     else:
-        frame_now_aligned = _align_frames(last_frame_lightness, img_lightness)
+        frame_now_aligned, offset_x, offset_y = _align_frames(last_frame_lightness, img_lightness)
         img_subtraction = frame_now_aligned - last_frame_lightness
+        # remove the outer black border
+        if offset_x != 0:
+            img_subtraction[:, 0:np.abs(offset_x)] = 0
+            img_subtraction[:, -np.abs(offset_x):] = 0
+        if offset_y != 0:
+            img_subtraction[0:np.abs(offset_y), :] = 0
+            img_subtraction[-np.abs(offset_y):, :] = 0
+
+
+    # 3) normalization
     img_sub_norm = ((img_subtraction - np.min(img_subtraction)) * 255 / (
             np.max(img_subtraction) - np.min(img_subtraction))).astype(np.uint8)
 
-    # 2. smoothing, threshold and morphology
+    # 4) smoothing and threshold
     median_value = np.median(img_sub_norm)
     img_smooth = cv2.blur(img_sub_norm, (5, 5))
     _, img_bw = cv2.threshold(img_smooth, median_value, 255, cv2.THRESH_BINARY)  # extremely critical
@@ -42,6 +54,7 @@ def preprocess(last_frame_lightness, img, reverse_flag):
     img_bw = cv2.medianBlur(img_bw, 5)
     # cv2.imshow("median_blur", img_bw)
 
+    # 5) morphology
     #  Morphology open, to remove some noise.
     kernel = np.ones((6, 6), np.uint8)
     img_mor = cv2.morphologyEx(img_bw, cv2.MORPH_OPEN, kernel)
@@ -82,7 +95,7 @@ def _align_frames(frame_pre, frame_now):
     min_y_val = 99999
     offset_x = 0
     offset_y = 0
-    for offset in range(-7, 7 + 1, 1):
+    for offset in range(-5, 5 + 1, 1):
         a_x = horizontal_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
         b_x = horizontal_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
         val_x = np.mean(np.linalg.norm(a_x - b_x, 1, axis=1))  # norm 1
@@ -106,4 +119,4 @@ def _align_frames(frame_pre, frame_now):
     M = np.float32([[1, 0, offset_x], [0, 1, offset_y]])
     frame_now_aligned = cv2.warpAffine(frame_now.astype(np.uint8), M, (width, height)).astype(np.int32)
 
-    return frame_now_aligned
+    return frame_now_aligned, offset_x, offset_y
