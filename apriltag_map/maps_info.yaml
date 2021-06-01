@@ -1,4 +1,5 @@
 name: 'map'
+unit: 'meter'
 width_num: 9
 height_num: 9
 layout:

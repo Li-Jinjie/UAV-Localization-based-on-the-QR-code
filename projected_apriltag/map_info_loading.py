@@ -14,4 +14,4 @@ path = "D:\\ForGithub\\UAV-Localization-based-on-the-QR-code\\apriltag_map\\maps
 with open(path, 'r') as file:
     map_info = yaml.load(file, Loader=yaml.FullLoader)
     layout = map_info['layout']
-    print(layout[0])
+    print(layout[0]['size'])
