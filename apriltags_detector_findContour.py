@@ -12,78 +12,72 @@ Description: a new AprilTag detector class
 import cv2
 import numpy as np
 import math
-from tag36h11 import tag36h11_create
+from tag36h11 import Tag36H11
 
 
 class TagsDetector:
-    cornersList = []
-    tagsList = []
-    resultList = []  # id, hamming_distance, rotate_degree
-    tag_flag = True
-
-    # used to decode
-    tag36h11List = []
-    bit_x = []
-    bit_y = []
 
     def __init__(self):
-        self.tag36h11List, self.bit_x, self.bit_y = tag36h11_create()
+        # to decode
+        self.tag36h11_info = Tag36H11()
+
+        # last frame
+        self.last_frame_lightness = None
+
+        # to save the results
+        self.cornersList = []
+        self.tagsList = []
+        self.resultList = []  # id, hamming_distance, rotate_degree
+
+        # flags
+        self.tag_flag = True
         self.reverse_flag = -1
         self.pass_flag = 1
 
     def detect(self, img):
-        resultList = []  # id, hamming_distance, rotate_degree  should be refresh every time
-        # imgBW_adap = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 5, 3)
-        # imgBW_adap = 255 - imgBW_adap    # 自适应阈值效果很差。
-        # cv2.imshow("imgBW_adap", imgBW_adap)
+        '''
+        Detect the apriltags in the image.
+        :param img:  BGR img
+        :return: self.tag_flag, result_list
+        '''
+        result_list = []  # id, hamming_distance, rotate_degree  should be refresh every time
 
-        # 求中位数
+        # 1. 转换色域，作差，归一化
+        imgLab = cv2.cvtColor(img, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
+        img_lightness = imgLab[:, :, 0].astype(np.int32)
+        if self.last_frame_lightness is None:
+            img_subtruction = img_lightness
+        else:
+            img_subtruction = img_lightness - self.last_frame_lightness
+        self.last_frame_lightness = img_lightness
+        img_sub_norm = (img_subtruction - np.min(img_subtruction)) * 255 / (
+                np.max(img_subtruction) - np.min(img_subtruction))
+
+        # 对齐图像
+
+        # get threshold
         median_value = np.median(img)
-        mean_value = np.mean(img)
-        _, imgBlackWhite = cv2.threshold(img, median_value, 255, cv2.THRESH_BINARY)  # extremely critical
+        _, img_black_white = cv2.threshold(img, median_value, 255, cv2.THRESH_BINARY)  # extremely critical
 
-        # _, imgBlackWhite = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)  # extremely critical
+        # _, img_black_white = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)  # extremely critical
         if self.reverse_flag == 1:
-            imgBlackWhite = 255 - imgBlackWhite
-        # cv2.imshow("imgBW", imgBlackWhite)
+            img_black_white = 255 - img_black_white
+        # cv2.imshow("imgBW", img_black_white)
         # cv2.waitKey(0)
 
-        imgBlackWhite = cv2.medianBlur(imgBlackWhite, 5)
+        img_black_white = cv2.medianBlur(img_black_white, 5)
 
         # c) Morphology open, to remove some noise. 好像去掉了一些细节不知道对角点精度有没有影响，再想想
         kernel = np.ones((4, 4), np.uint8)
-        imgMor = cv2.morphologyEx(imgBlackWhite, cv2.MORPH_OPEN, kernel)
+        imgMor = cv2.morphologyEx(img_black_white, cv2.MORPH_OPEN, kernel)
 
         imgMorOpen = imgMor.copy()
 
         kernel = np.ones((10, 10), np.uint8)  # need to adjust more carefully
         imgMor = cv2.morphologyEx(imgMor, cv2.MORPH_CLOSE, kernel)
-        # cv2.imshow("imgBW", imgBlackWhite)
+        # cv2.imshow("imgBW", img_black_white)
         # cv2.imshow("imgMorOpen", imgMorOpen)
-        cv2.imshow("imgMorClose", imgMor)
-        cv2.waitKey(0)
-
-        # # HoughLines test
-        # imgEdge = cv2.Canny(imgMor, 50, 150, apertureSize=3)
-        # lines = cv2.HoughLines(imgEdge, 1, np.pi / 180, 120, None, 0, 0)
-        #
-        # if lines is not None:
-        #     for i in range(0, len(lines)):
-        #         rho = lines[i][0][0]
-        #         theta = lines[i][0][1]
-        #         a = math.cos(theta)
-        #         b = math.sin(theta)
-        #         x0 = a * rho
-        #         y0 = b * rho
-        #         pt1 = (int(x0 + 1000 * (-b)), int(y0 + 1000 * (a)))
-        #         pt2 = (int(x0 - 1000 * (-b)), int(y0 - 1000 * (a)))
-        #         cv2.line(imgBlackWhite, pt1, pt2, 127, 3, cv2.LINE_AA)
-        # cv2.imshow("Canny", imgEdge)
-        # cv2.imshow("HoughLines", imgBlackWhite)
-        # cv2.waitKey(0)
-
-
-
+        imshow_img("imgMorClose", imgMor)
 
         # d) find contours and contour approximation
         contours, hierarchy = cv2.findContours(imgMor, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -153,7 +147,7 @@ class TagsDetector:
         # cv2.waitKey(0)
 
         # (3) 得到矩形四个点的坐标
-        tagCornersList = []  # 4 * 2
+        tag_corners_list = []  # 4 * 2
         for rect in rectangleList:  # each rectangle
             tagCorners = np.zeros([4, 1, 2], dtype=np.int32)
             lt = rect[0]
@@ -176,35 +170,37 @@ class TagsDetector:
                     else:
                         continue
 
-            tagCornersList.append(tagCorners)
+            tag_corners_list.append(tagCorners)
         # ======= to display =========
         # imgPolyLines = img.copy()
-        # for tagCorners in tagCornersList:
+        # for tagCorners in tag_corners_list:
         #     cv2.polylines(imgPolyLines, [tagCorners], True, 255)
         # cv2.imshow("imgWithPoints", imgPolyLines)
         # cv2.waitKey(0)
 
-        # Perspective transform
-        self.tagsList = self._perspective_transform(imgBlackWhite, tagCornersList)
+        # # Perspective transform
+        # self.tagsList = self._perspective_transform(img_black_white, tag_corners_list)
+        #
+        # # STEP 2 : apriltag decoding
+        # # a) save data of tag36h11 in __init__()
+        # for i, tag in enumerate(self.tagsList):
+        #     # b) rotate the img and get four code
+        #     intCodeList = self._rotate_get_int(tag, self.bit_x, self.bit_y)
+        #     # c) calculate the hamming distance and find the minimal one
+        #     hamming, id, rotate_dgree = self._find_min_hamming(intCodeList, self.tag36h11List)
+        #     # d) filter invalid code and append result
+        #     if hamming < 4:
+        #         lt_rt_rd_ld = np.rot90(tag_corners_list[i], rotate_dgree / 90)
+        #         result_list.append(
+        #             {'id': id, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
 
-        # STEP 2 : apriltag decoding
-        # a) save data of tag36h11 in __init__()
-        for i, tag in enumerate(self.tagsList):
-            # b) rotate the img and get four code
-            intCodeList = self._rotate_get_int(tag, self.bit_x, self.bit_y)
-            # c) calculate the hamming distance and find the minimal one
-            hamming, id, rotate_dgree = self._find_min_hamming(intCodeList, self.tag36h11List)
-            # d) filter invalid code and append result
-            if hamming < 4:
-                lt_rt_rd_ld = np.rot90(tagCornersList[i], rotate_dgree / 90)
-                resultList.append(
-                    {'id': id, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
+        result_list = self.decode(img_black_white, tag_corners_list, self.tag36h11_info)
 
         # ======= to display =========
         imgFinal = img.copy()
-        for tagCorners in tagCornersList:
+        for tagCorners in tag_corners_list:
             cv2.polylines(imgFinal, [tagCorners], True, 255)
-        for result in resultList:
+        for result in result_list:
             text = "id:" + str(result["id"]) + " hamming:" + str(result["hamming"])
             org = (result["lt_rt_rd_ld"][0, :].item(0), result["lt_rt_rd_ld"][0, :].item(1))
             cv2.putText(imgFinal, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
@@ -213,62 +209,65 @@ class TagsDetector:
         cv2.waitKey(0)
 
         # STEP 3 : update the flag
-        if len(resultList) == 0:
+        if len(result_list) == 0:
             self.tag_flag = False
         else:
             self.tag_flag = True
             self.reverse_flag = -1 * self.reverse_flag  # 下一张是反转的检测的
             self.pass_flag = - self.pass_flag  # 去除下一张
 
-        return self.tag_flag, resultList
+        return self.tag_flag, result_list
 
-    def _perspective_transform(self, imgMor, cornersList):
+    def decode(self, img, tagCornersList, tag36h11):
+        """
+        input the positions of the tags' four corners, then decode the tag
+        :param img: image
+        :param tagCornersList: a list that contains the four corners' positions of all tags
+        :param tag36h11: a class that stores tag36h11 information
+        :return result_list: a list that contains 'idx, hamming_distance, rotate_degree', should be refreshed every time
+        """
+        result_list = []
+        # a) Perspective transform
+        tags_list = self._perspective_transform(img, tagCornersList)
+        # b) save data of tag36h11 in __init__()
+        for i, tag in enumerate(tags_list):
+            # c) rotate the img and get four code
+            int_code_list = self._rotate_get_int(tag, tag36h11.bit_x, tag36h11.bit_y)
+            # d) calculate the hamming distance and find the minimal one
+            hamming, idx, rotate_degree = self._find_min_hamming(int_code_list, tag36h11.codes)
+            # e) filter invalid code and append result
+            if hamming < 4:
+                lt_rt_rd_ld = np.rot90(tagCornersList[i], int(rotate_degree / 90))
+                result_list.append({'idx': idx, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
 
-        tagsList = []
-        sizePixel = 80
-        points2 = np.array([[0, 0], [sizePixel, 0], [sizePixel, sizePixel], [0, sizePixel]])  # lt_rt_rd_ld
-        for corners in cornersList:
+        return result_list
+
+    def _perspective_transform(self, img_mor, corners_list):
+        tags_list = []
+        size_pixel = 80
+        points2 = np.array([[0, 0], [size_pixel, 0], [size_pixel, size_pixel], [0, size_pixel]])  # lt_rt_rd_ld
+        for corners in corners_list:
             # cv2.polylines(imgMor, [corners], True, 127)
             # cv2.imshow("imgWithPoints", imgMor)
             # cv2.waitKey(0)
 
             corners = corners.squeeze()
             h, status = cv2.findHomography(corners, points2)
-            QRcode = cv2.warpPerspective(imgMor, h, (sizePixel, sizePixel))
+            qr_code = cv2.warpPerspective(img_mor, h, (size_pixel, size_pixel))
 
-            # cv2.imshow("QRcode", QRcode)
-            # cv2.waitKey(0)
+            qr_blur = cv2.medianBlur(qr_code, 3)  # important!
 
-            # kernel = np.ones((2, 2), np.uint8)  # need to adjust more carefully
-            # QRMor = cv2.morphologyEx(QRcode, cv2.MORPH_CLOSE, kernel)
-            # cv2.imshow("QRMor", QRMor)
-            # cv2.waitKey(0)
+            qr_code_small = cv2.resize(qr_blur, (8, 8), dst=cv2.INTER_NEAREST)
+            _, qr_code_small = cv2.threshold(qr_code_small, 0, 255, cv2.THRESH_OTSU)
+            if (np.sum(qr_code_small[0, :-1]) + np.sum(qr_code_small[:-1, -1]) + np.sum(qr_code_small[1:, 0]) + np.sum(
+                    qr_code_small[-1, 1:])) / 28 > 127:
+                qr_code_small = 255 - qr_code_small
 
-            QRBlur = cv2.medianBlur(QRcode, 3)
-            # cv2.imshow("QRBlur", QRBlur)
-            # cv2.waitKey(0)
-
-            # QRBlur = cv2.medianBlur(QRBlur, 3)
-            # cv2.imshow("QRBlur", QRBlur)
-            # cv2.waitKey(0)
-
-            # _, QRcode = cv2.threshold(
-            #     QRcode, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-            QRcodeSmall = cv2.resize(QRBlur, (8, 8), dst=cv2.INTER_NEAREST)
-            _, QRcodeSmall = cv2.threshold(QRcodeSmall, 0, 255, cv2.THRESH_OTSU)
-            if (np.sum(QRcodeSmall[0, :-1]) + np.sum(QRcodeSmall[:-1, -1]) + np.sum(QRcodeSmall[1:, 0]) + np.sum(
-                    QRcodeSmall[-1, 1:])) / 28 > 127:
-                QRcodeSmall = 255 - QRcodeSmall
-
-            # cv2.imshow("QRcodeSmall", QRcodeSmall)
-            # cv2.waitKey(0)
-
-            tagsList.append(QRcodeSmall)
-        return tagsList
+            tags_list.append(qr_code_small)
+        return tags_list
 
     def _rotate_get_int(self, tag, bit_x, bit_y):
-        intCodeList = []
+        int_code_list = []
         for i in range(4):
             tag = np.rot90(tag, i)
             code = '0b'
@@ -277,36 +276,51 @@ class TagsDetector:
                     code = code + '0'
                 else:
                     code = code + '1'
-            intCode = int(code, 2)
-            intCodeList.append(intCode)
-        return intCodeList
+            int_code = int(code, 2)
+            int_code_list.append(int_code)
+        return int_code_list
 
-    def _find_min_hamming(self, intCodeList, tag36h11List):
-        hammingMin = 36
-        idMin = 0
-        rotate_dgree = 0
-        for intCode in intCodeList:
-            hammingMinLocal = 36
-            idMinLocal = 0
-            for iD, tagCode in enumerate(tag36h11List):
-                s = str(bin(intCode ^ tagCode))
+    def _find_min_hamming(self, int_code_list, tag36h11_list):
+        hamming_min = 36
+        id_min = 0
+        rotate_degree = 0
+        for int_code in int_code_list:
+            hamming_min_local = 36
+            id_min_local = 0
+            for idx, tag_code in enumerate(tag36h11_list):
+                s = str(bin(int_code ^ tag_code))
                 hamming = 0
                 for i in range(2, len(s)):
                     if int(s[i]) == 1:
                         hamming += 1
-                if hammingMinLocal > hamming:
-                    hammingMinLocal = hamming
-                    idMinLocal = iD
-                if hammingMinLocal == 0:
+                if hamming_min_local > hamming:
+                    hamming_min_local = hamming
+                    id_min_local = idx
+                if hamming_min_local == 0:
                     break
-            if hammingMin > hammingMinLocal:
-                hammingMin = hammingMinLocal
-                idMin = idMinLocal
-            if hammingMin == 0:
+            if hamming_min > hamming_min_local:
+                hamming_min = hamming_min_local
+                id_min = id_min_local
+            if hamming_min == 0:
                 break
-            rotate_dgree += 90
+            rotate_degree += 90
 
-        return hammingMin, idMin, rotate_dgree
+        return hamming_min, id_min, rotate_degree
+
+
+def imshow_img(name, img):
+    '''
+    show an image whatever its data format is
+    :param name: str
+    :param img: np.array
+    :return: None
+    '''
+    cv2.imshow(name, img.astype(np.uint8))
+    cv2.waitKey(0)
+
+
+def imshow_corners():
+    pass
 
 
 if __name__ == '__main__':
