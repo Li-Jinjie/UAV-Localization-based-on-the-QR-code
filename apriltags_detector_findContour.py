@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 '''
 Author: LI Jinjie
-File: apriltags_detector_new.py
+File: apriltags_detector_findContour.py
 Date: 2021/5/7 8:07
 LastEditors: LI Jinjie
 LastEditTime: 2021/5/7 8:07
@@ -13,7 +13,6 @@ import cv2
 import numpy as np
 import math
 from tag36h11 import tag36h11_create
-from apriltag import apriltag
 
 
 class TagsDetector:
@@ -30,6 +29,7 @@ class TagsDetector:
     def __init__(self):
         self.tag36h11List, self.bit_x, self.bit_y = tag36h11_create()
         self.reverse_flag = -1
+        self.pass_flag = 1
 
     def detect(self, img):
         resultList = []  # id, hamming_distance, rotate_degree  should be refresh every time
@@ -37,7 +37,12 @@ class TagsDetector:
         # imgBW_adap = 255 - imgBW_adap    # 自适应阈值效果很差。
         # cv2.imshow("imgBW_adap", imgBW_adap)
 
-        _, imgBlackWhite = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)  # extremely critical
+        # 求中位数
+        median_value = np.median(img)
+        mean_value = np.mean(img)
+        _, imgBlackWhite = cv2.threshold(img, median_value, 255, cv2.THRESH_BINARY)  # extremely critical
+
+        # _, imgBlackWhite = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)  # extremely critical
         if self.reverse_flag == 1:
             imgBlackWhite = 255 - imgBlackWhite
         # cv2.imshow("imgBW", imgBlackWhite)
@@ -51,7 +56,7 @@ class TagsDetector:
 
         imgMorOpen = imgMor.copy()
 
-        kernel = np.ones((4, 4), np.uint8)  # need to adjust more carefully
+        kernel = np.ones((10, 10), np.uint8)  # need to adjust more carefully
         imgMor = cv2.morphologyEx(imgMor, cv2.MORPH_CLOSE, kernel)
         # cv2.imshow("imgBW", imgBlackWhite)
         # cv2.imshow("imgMorOpen", imgMorOpen)
@@ -107,10 +112,10 @@ class TagsDetector:
             rectangleList.append(np.array([lt, rb]))
 
             # ====== to display ========
-        #     for i in range(corners.shape[0]):
-        #         cv2.circle(img, (corners[i, 0, :].item(0), corners[i, 0, :].item(1)), 2, 255, -1)
-        # cv2.imshow("imgWithPoints", img)
-        # cv2.waitKey(0)
+            for i in range(corners.shape[0]):
+                cv2.circle(img, (corners[i, 0, :].item(0), corners[i, 0, :].item(1)), 2, 255, -1)
+        cv2.imshow("imgWithCorners", img)
+        cv2.waitKey(0)
 
         # (2) 判断矩形的重叠
         N = len(rectangleList)
@@ -144,7 +149,7 @@ class TagsDetector:
         # imgPoints = img.copy()
         # for rect in rectangleList:
         #     cv2.rectangle(imgPoints, (rect[0][0], rect[0][1]), (rect[1][0], rect[1][1]), 255)
-        # cv2.imshow("imgWithPoints", imgPoints)
+        # cv2.imshow("imgWithRectangles", imgPoints)
         # cv2.waitKey(0)
 
         # (3) 得到矩形四个点的坐标
@@ -204,7 +209,7 @@ class TagsDetector:
             org = (result["lt_rt_rd_ld"][0, :].item(0), result["lt_rt_rd_ld"][0, :].item(1))
             cv2.putText(imgFinal, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
 
-        cv2.imshow("imgWithPoints", imgFinal)
+        cv2.imshow("imgWithResults", imgFinal)
         cv2.waitKey(0)
 
         # STEP 3 : update the flag
@@ -212,7 +217,8 @@ class TagsDetector:
             self.tag_flag = False
         else:
             self.tag_flag = True
-            self.reverse_flag = -1 * self.reverse_flag
+            self.reverse_flag = -1 * self.reverse_flag  # 下一张是反转的检测的
+            self.pass_flag = - self.pass_flag  # 去除下一张
 
         return self.tag_flag, resultList
 
