@@ -13,14 +13,14 @@ import cv2
 import numpy as np
 import time
 import copy
-from apriltags_detector_new import TagsDetector
-
+# from apriltags_detector_findContour import TagsDetector
+from projected_apriltag.detector import TagsDetector
 
 def main():
     detector = TagsDetector()
     # ===== open a video =======
-    path = 'receiver_videos/'
-    video_name = '0527_color_120fps_L=4_9x9_noLight_720p.avi'
+    path = 'experiments_data_real/20210530_full_data/'
+    video_name = '0530_color_120fps_L=4_9x9_noLight_720p_with_optitrack.avi'
     # video_name = '0517_color_120fps_80degree_720p.avi'
     cap = cv2.VideoCapture(path + video_name)
     org_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -42,41 +42,41 @@ def main():
         if ret is True:
 
             # # ========== detect apriltags =============
-            if cnt > 1000:
+            if cnt > 750:
+                # if detector.pass_flag > 0:
+                #     detector.pass_flag = - detector.pass_flag
+                #     continue
                 # cv2.imshow("code_org", frame)
                 # cv2.waitKey(0)
 
-                # ====== LAB =====
-
-                frame_Lab = cv2.cvtColor(frame, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
-                frame_now_d = frame_Lab[:, :, 0].astype(np.int32)
-                frame_last_d = org_frame_lightness.astype(np.int32)
-                org_frame_lightness = frame_Lab[:, :, 0]
-
-                # frame_gray = cv2.cvtColor(frame, code=cv2.COLOR_BGR2GRAY)  # transform from BGR to gray
-                # frame_now_d = frame_gray.astype(np.int32)
+                # # ====== LAB =====
+                #
+                # frame_Lab = cv2.cvtColor(frame, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
+                # frame_now_d = frame_Lab[:, :, 0].astype(np.int32)
                 # frame_last_d = org_frame_lightness.astype(np.int32)
-                # org_frame_lightness = frame_gray
+                # org_frame_lightness = frame_Lab[:, :, 0]
+                #
+                # # frame_gray = cv2.cvtColor(frame, code=cv2.COLOR_BGR2GRAY)  # transform from BGR to gray
+                # # frame_now_d = frame_gray.astype(np.int32)
+                # # frame_last_d = org_frame_lightness.astype(np.int32)
+                # # org_frame_lightness = frame_gray
+                #
+                # # code_img = frame_Lab[:, :, 0] - org_frame_lightness
+                # sub_img = frame_now_d - frame_last_d
+                # code_img_lab = (sub_img - np.min(sub_img)) * 255 / (np.max(sub_img) - np.min(sub_img))
+                # code_img_lab = code_img_lab.astype(np.uint8)
+                #
+                # cv2.imshow("code_sub", code_img_lab)
+                # cv2.waitKey(0)
 
-                # code_img = frame_Lab[:, :, 0] - org_frame_lightness
-                sub_img = frame_now_d - frame_last_d
-                code_img_lab = (sub_img - np.min(sub_img)) * 255 / (np.max(sub_img) - np.min(sub_img))
-                code_img_lab = code_img_lab.astype(np.uint8)
 
-                cv2.imshow("code_sub", code_img_lab)
-                cv2.waitKey(0)
-
-
-                flag, results = detector.detect(code_img_lab)
+                flag, results = detector.detect(frame)
                 if flag == True:
                     for i, result in enumerate(results):
                         print(result)
                     print(str(len(results)) + ' apriltags are detected in total!')
                 else:
                     print('No apriltag is detected!')
-
-                # ======== img processing =============
-                ret, code_img_BW = cv2.threshold(code_img_lab, 0, 255, cv2.THRESH_OTSU)
 
             print(cnt)
 
@@ -97,19 +97,19 @@ def main():
             #
             # code_img_bgr = code_img_bgr.astype(np.uint8)
 
-            if cnt == -1:
-                # cv2.imshow("code_add", code_img_add.astype(np.uint8))
-                # cv2.waitKey(0)
-                name = video_name + "_lab.png"
-                # cv2.imwrite("receiver_pictures/" + name, code_img_lab.astype(np.uint8))
-
-                cv2.imshow("code_lab", code_img_lab)
-                cv2.imshow("code_lab", code_img_lab.astype(np.uint8))
-                cv2.waitKey(0)
-                cv2.imwrite("receiver_pictures/" + name, code_img_lab.astype(np.uint8))
-                cv2.imshow("code_BW", code_img_BW)
-                cv2.imshow("frame", frame)
-                cv2.waitKey(0)
+            # if cnt == -1:
+            #     # cv2.imshow("code_add", code_img_add.astype(np.uint8))
+            #     # cv2.waitKey(0)
+            #     name = video_name + "_lab.png"
+            #     # cv2.imwrite("receiver_pictures/" + name, code_img_lab.astype(np.uint8))
+            #
+            #     cv2.imshow("code_lab", code_img_lab)
+            #     cv2.imshow("code_lab", code_img_lab.astype(np.uint8))
+            #     cv2.waitKey(0)
+            #     cv2.imwrite("receiver_pictures/" + name, code_img_lab.astype(np.uint8))
+            #     cv2.imshow("code_BW", code_img_BW)
+            #     cv2.imshow("frame", frame)
+            #     cv2.waitKey(0)
             #     cv2.imshow("code", code_img_bgr)
             #     cv2.imshow("img_last", last_frame_bgr)
             #     cv2.imshow("img_now", frame)
@@ -120,15 +120,12 @@ def main():
 
             cnt += 1
 
-            last_frame_bgr = frame
-
         else:
             break
 
         # if tmp == 1500:  # 60 fps, 25 s
         #     time_end = time.time()
         #     break
-        # Release everything if job is finished
     cap.release()
 
     print("Finished!")

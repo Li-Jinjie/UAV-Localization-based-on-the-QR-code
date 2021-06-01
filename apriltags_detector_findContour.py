@@ -42,23 +42,62 @@ class TagsDetector:
         :param img:  BGR
         :return self.tag_flag, result_list:
         """
-        # if self.pass_flag > 0:
-        #     self.pass_flag = - self.pass_flag
-        #     return False, []
+        if self.pass_flag > 0:
+            self.pass_flag = - self.pass_flag
+            img_lab = cv2.cvtColor(img, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
+            self.last_frame_lightness = img_lab[:, :, 0].astype(np.int32)
+            return False, []
 
         self.height, self.width, _ = img.shape
 
         # STEP 1: preprocessing
-        # 1. convert BGR to Lab, alignment, subtraction, normalization
-        imgLab = cv2.cvtColor(img, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
-        img_lightness = imgLab[:, :, 0].astype(np.int32)
+        img_mor, img_bw, img_sub_norm, self.last_frame_lightness = self.preprocess(self.last_frame_lightness, img, self.reverse_flag)
 
-        if self.last_frame_lightness is None:
+
+        # STEP 2: find corners
+        tag_corners_list = self.find_corner(img_mor)
+
+        # # ======= to display =========
+        # img_poly_lines = img_sub_norm.copy()
+        # for tagCorners in tag_corners_list:
+        #     cv2.polylines(img_poly_lines, [tagCorners], True, 255)
+        # cv2.imshow("imgWithPoints", img_poly_lines)
+
+        # STEP 3 : decoding
+        result_list = self.decode(img_bw, tag_corners_list, self.tag36h11_info)
+
+        # ======= to display =========
+        imgFinal = img_sub_norm.copy()
+        for tagCorners in tag_corners_list:
+            cv2.polylines(imgFinal, [tagCorners], True, 255)
+        for result in result_list:
+            text = "idx:" + str(result["idx"]) + " hamming:" + str(result["hamming"])
+            org = (result["lt_rt_rd_ld"][0, :].item(0), result["lt_rt_rd_ld"][0, :].item(1))
+            cv2.putText(imgFinal, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
+
+        cv2.imshow("imgWithResults", imgFinal)
+        cv2.waitKey(0)
+
+        # STEP 4 : update the flag
+        if len(result_list) == 0:
+            self.tag_flag = False
+        else:
+            self.tag_flag = True
+            self.reverse_flag = -1 * self.reverse_flag  # 下一张是反转的检测的
+            self.pass_flag = - self.pass_flag  # 去除下一张
+
+        return self.tag_flag, result_list
+
+    def preprocess(self, last_frame_lightness, img, reverse_flag):
+        # 1). convert BGR to Lab, alignment, subtraction, normalization
+        img_lab = cv2.cvtColor(img, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
+        img_lightness = img_lab[:, :, 0].astype(np.int32)
+
+        if last_frame_lightness is None:
             img_subtraction = img_lightness
         else:
-            frame_now_aligned = self._align_frames(self.last_frame_lightness, img_lightness)
-            img_subtraction = frame_now_aligned - self.last_frame_lightness
-        self.last_frame_lightness = img_lightness  # store frame
+            frame_now_aligned = self._align_frames(last_frame_lightness, img_lightness)
+            img_subtraction = frame_now_aligned - last_frame_lightness
         img_sub_norm = ((img_subtraction - np.min(img_subtraction)) * 255 / (
                 np.max(img_subtraction) - np.min(img_subtraction))).astype(np.uint8)
 
@@ -73,7 +112,7 @@ class TagsDetector:
         # cv2.imshow("threshold_org", img_bw_org)
 
         # _, img_bw = cv2.threshold(img, 0, 255, cv2.THRESH_OTSU)  # extremely critical
-        if self.reverse_flag == 1:
+        if reverse_flag == 1:
             img_bw = 255 - img_bw
         # cv2.imshow("imgBW", img_bw)
 
@@ -85,12 +124,68 @@ class TagsDetector:
         img_mor = cv2.morphologyEx(img_bw, cv2.MORPH_OPEN, kernel)
         # cv2.imshow("open", img_mor)
 
-        kernel = np.ones((16, 16), np.uint8)  # need to adjust more carefully
+        kernel = np.ones((15, 15), np.uint8)  # need to adjust more carefully
         img_mor = cv2.morphologyEx(img_mor, cv2.MORPH_CLOSE, kernel)
-        cv2.imshow("close", img_mor)
+        # cv2.imshow("close", img_mor)
         # cv2.waitKey(0)
+        return img_mor, img_bw, img_sub_norm, img_lightness
 
-        # STEP 2: find corners
+    def _align_frames(self, frame_pre, frame_now):
+        """
+        choose 3 horizontal lines and 3 vertical lines to get the best x,y bias, return aligned frame_now
+        :param frame_pre:
+        :param frame_now:
+        :return frame_now_aligned:
+        """
+        height = self.height
+        width = self.width
+        horizontal_lines = [np.array([frame_pre[int(height * 1 / 4), :],
+                                      frame_pre[int(height * 2 / 4), :],
+                                      frame_pre[int(height * 3 / 4), :]]),
+
+                            np.array([frame_now[int(height * 1 / 4), :],
+                                      frame_now[int(height * 2 / 4), :],
+                                      frame_now[int(height * 3 / 4), :]])]
+
+        vertical_lines = [np.array([frame_pre[:, int(width * 1 / 4)],
+                                    frame_pre[:, int(width * 2 / 4)],
+                                    frame_pre[:, int(width * 3 / 4)]]),
+
+                          np.array([frame_now[:, int(width * 1 / 4)],
+                                    frame_now[:, int(width * 2 / 4)],
+                                    frame_now[:, int(width * 3 / 4)]])]
+
+        min_x_val = 99999
+        min_y_val = 99999
+        offset_x = 0
+        offset_y = 0
+        for offset in range(-7, 7 + 1, 1):
+            a_x = horizontal_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
+            b_x = horizontal_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
+            val_x = np.mean(np.linalg.norm(a_x - b_x, 1, axis=1))  # norm 1
+            # print('offset_x is:', offset, ' norm=', val_x)
+            if val_x < min_x_val:
+                min_x_val = val_x
+                offset_x = offset
+
+            a_y = vertical_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
+            b_y = vertical_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
+            val_y = np.mean(np.linalg.norm(a_y - b_y, 1, axis=1))  # norm 1
+            # print('offset_y is:', offset, ' norm=', val_y)
+            if val_y < min_y_val:
+                min_y_val = val_y
+                offset_y = offset
+
+        print('The final offset_x is:', offset_x)
+        print('The final offset_y is:', offset_y)
+
+        # translation
+        M = np.float32([[1, 0, offset_x], [0, 1, offset_y]])
+        frame_now_aligned = cv2.warpAffine(frame_now.astype(np.uint8), M, (width, height)).astype(np.int32)
+
+        return frame_now_aligned
+
+    def find_corner(self, img_mor):
         # 1. find contours
         contours, hierarchy = cv2.findContours(img_mor, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -130,170 +225,7 @@ class TagsDetector:
         #         cv2.circle(img_with_pts, (corners[i, 0, :].item(0), corners[i, 0, :].item(1)), 2, 255, -1)
         # cv2.imshow("imgWithPoints", img_with_pts)
         # cv2.waitKey(0)
-
-        # # (1) 得到每个四边形外接矩形的lt和rb坐标
-        # rectangleList = []
-        # for corners in corners_list:
-        #     # cv2.fillConvexPoly(img, corners, 255)
-        #     # cv2.fillPoly(black, [corners], 255)
-        #
-        #     lt = np.array([np.min(corners[:, 0, 0]), np.min(corners[:, 0, 1])])
-        #     rb = np.array([np.max(corners[:, 0, 0]), np.max(corners[:, 0, 1])])
-        #     rectangleList.append(np.array([lt, rb]))
-        #
-        #     # ====== to display ========
-        #     for i in range(corners.shape[0]):
-        #         cv2.circle(img, (corners[i, 0, :].item(0), corners[i, 0, :].item(1)), 2, 255, -1)
-        # # cv2.imshow("imgWithCorners", img)
-        # # cv2.waitKey(0)
-        #
-        # # (2) 判断矩形的重叠
-        # N = len(rectangleList)
-        # i = 0
-        # while i != N:
-        #     for j in range(i + 1, N):
-        #         rect1 = rectangleList[i]  # 0: lt, 1: rb
-        #         rect2 = rectangleList[j]
-        #
-        #         # 求相交位置的坐标
-        #         p1 = np.max([rect1[0, :], rect2[0, :]], axis=0)  # lt
-        #         p2 = np.min([rect1[1, :], rect2[1, :]], axis=0)  # rb
-        #
-        #         if (p2[0] > p1[0]) and (p2[1] > p1[1]):
-        #             # add new rectangle
-        #             lt_new = np.min([rect1[0, :], rect2[0, :]], axis=0)
-        #             rb_new = np.max([rect1[1, :], rect2[1, :]], axis=0)
-        #
-        #             rectangleList.append(np.array([lt_new, rb_new]))
-        #             # delete old
-        #             rectangleList.pop(j)  # 先删除后边的元素
-        #             rectangleList.pop(i)
-        #             i = 0
-        #             N = N - 1
-        #             break
-        #         else:
-        #             j = j + 1
-        #     i = i + 1
-
-        # # ======= to display =========
-        # imgPoints = img.copy()
-        # for rect in rectangleList:
-        #     cv2.rectangle(imgPoints, (rect[0][0], rect[0][1]), (rect[1][0], rect[1][1]), 255)
-        # cv2.imshow("imgWithRectangles", imgPoints)
-        # cv2.waitKey(0)
-
-        # # (3) 得到矩形四个点的坐标
-        # tag_corners_list = []  # 4 * 2
-        # for rect in rectangleList:  # each rectangle
-        #     tagCorners = np.zeros([4, 1, 2], dtype=np.int32)
-        #     lt = rect[0]
-        #     rb = rect[1]
-        #     rt = np.array([rb.item(0), lt.item(1)])
-        #     lb = np.array([lt.item(0), rb.item(1)])
-        #     rect_corners = [lt, rt, rb, lb]
-        #
-        #     for idx, pts in enumerate(rect_corners):  # each point of a rectangle
-        #         distance_min = 9999
-        #         for corners in corners_list:
-        #             # if in the rectangle
-        #             if (lt.item(0) <= corners[0, 0, 0] <= rb.item(0)) and (
-        #                     lt.item(1) <= corners[0, 0, 1] <= rb.item(1)):
-        #                 for corner in corners:
-        #                     distance = np.sum(np.abs(pts - corner))  # Manhattan Distance
-        #                     if distance < distance_min:
-        #                         distance_min = distance
-        #                         tagCorners[idx, 0, :] = corner
-        #             else:
-        #                 continue
-        #
-        #     tag_corners_list.append(tagCorners)
-
-        tag_corners_list = corners_list
-        # # ======= to display =========
-        # img_poly_lines = img_sub_norm.copy()
-        # for tagCorners in tag_corners_list:
-        #     cv2.polylines(img_poly_lines, [tagCorners], True, 255)
-        # cv2.imshow("imgWithPoints", img_poly_lines)
-
-        # STEP 3 : decoding
-        result_list = self.decode(img_bw, tag_corners_list, self.tag36h11_info)
-
-        # ======= to display =========
-        imgFinal = img_sub_norm.copy()
-        for tagCorners in tag_corners_list:
-            cv2.polylines(imgFinal, [tagCorners], True, 255)
-        for result in result_list:
-            text = "idx:" + str(result["idx"]) + " hamming:" + str(result["hamming"])
-            org = (result["lt_rt_rd_ld"][0, :].item(0), result["lt_rt_rd_ld"][0, :].item(1))
-            cv2.putText(imgFinal, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
-
-        cv2.imshow("imgWithResults", imgFinal)
-        cv2.waitKey(0)
-
-        # STEP 4 : update the flag
-        if len(result_list) == 0:
-            self.tag_flag = False
-        else:
-            self.tag_flag = True
-            self.reverse_flag = -1 * self.reverse_flag  # 下一张是反转的检测的
-            self.pass_flag = - self.pass_flag  # 去除下一张
-
-        return self.tag_flag, result_list
-
-    def _align_frames(self, frame_pre, frame_now):
-        """
-        choose 3 horizontal lines and 3 vertical lines to get the best x,y bias, return aligned frame_now
-        :param frame_pre:
-        :param frame_now:
-        :return frame_now_aligned:
-        """
-        height = self.height
-        width = self.width
-        horizontal_lines = [np.array([frame_pre[int(height * 1 / 4), :],
-                                      frame_pre[int(height * 2 / 4), :],
-                                      frame_pre[int(height * 3 / 4), :]]),
-
-                            np.array([frame_now[int(height * 1 / 4), :],
-                                      frame_now[int(height * 2 / 4), :],
-                                      frame_now[int(height * 3 / 4), :]])]
-
-        vertical_lines = [np.array([frame_pre[:, int(width * 1 / 4)],
-                                    frame_pre[:, int(width * 2 / 4)],
-                                    frame_pre[:, int(width * 3 / 4)]]),
-
-                          np.array([frame_now[:, int(width * 1 / 4)],
-                                    frame_now[:, int(width * 2 / 4)],
-                                    frame_now[:, int(width * 3 / 4)]])]
-
-        min_x_val = 99999
-        min_y_val = 99999
-        offset_x = 0
-        offset_y = 0
-        for offset in range(-5, 5 + 1, 1):
-            a_x = horizontal_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
-            b_x = horizontal_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
-            val_x = np.max(np.linalg.norm(a_x - b_x, 1, axis=1))  # norm 1
-            # print('offset_x is:', offset, ' norm=', val_x)
-            if val_x < min_x_val:
-                min_x_val = val_x
-                offset_x = offset
-
-            a_y = vertical_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
-            b_y = vertical_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
-            val_y = np.max(np.linalg.norm(a_y - b_y, 1, axis=1))  # norm 1
-            # print('offset_y is:', offset, ' norm=', val_y)
-            if val_y < min_y_val:
-                min_y_val = val_y
-                offset_y = offset
-
-        print('The final offset_x is:', offset_x)
-        print('The final offset_y is:', offset_y)
-
-        # translation
-        M = np.float32([[1, 0, offset_x], [0, 1, offset_y]])
-        frame_now_aligned = cv2.warpAffine(frame_now.astype(np.uint8), M, (width, height)).astype(np.int32)
-
-        return frame_now_aligned
+        return corners_list
 
     def decode(self, img, tag_corners_list, tag36h11):
         """
