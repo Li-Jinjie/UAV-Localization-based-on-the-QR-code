@@ -12,18 +12,63 @@ import cv2
 import numpy as np
 from apriltags_detector_new import TagsDetector
 
-frame_1 = cv2.imread("receiver_pictures/0526_img_1137.png")
+frame_1 = cv2.imread("experiments_data_real/receiver_pictures/1502.png")
 frame_Lab_1 = cv2.cvtColor(frame_1, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
 frame_intense_1 = frame_Lab_1[:, :, 0].astype(np.int32)
 
-frame_2 = cv2.imread("receiver_pictures/0526_img_1138.png")
+frame_2 = cv2.imread("experiments_data_real/receiver_pictures/1503.png")
 frame_Lab_2 = cv2.cvtColor(frame_2, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
 frame_intense_2 = frame_Lab_2[:, :, 0].astype(np.int32)
 
-# translation
 height, width = frame_intense_2.shape
-x = -1
-y = 0
+
+# get best bias
+# choose three lines
+horizontal_lines = [np.array([frame_intense_1[int(height * 1 / 4), :],
+                              frame_intense_1[int(height * 2 / 4), :],
+                              frame_intense_1[int(height * 3 / 4), :]]),
+
+                    np.array([frame_intense_2[int(height * 1 / 4), :],
+                              frame_intense_2[int(height * 2 / 4), :],
+                              frame_intense_2[int(height * 3 / 4), :]])]
+
+vertical_lines = [np.array([frame_intense_1[:, int(width * 1 / 4)],
+                            frame_intense_1[:, int(width * 2 / 4)],
+                            frame_intense_1[:, int(width * 3 / 4)]]),
+
+                  np.array([frame_intense_2[:, int(width * 1 / 4)],
+                            frame_intense_2[:, int(width * 2 / 4)],
+                            frame_intense_2[:, int(width * 3 / 4)]])]
+
+min_val = 99999
+offset_x = 0
+for offset in range(-5, 5 + 1, 1):
+    a = horizontal_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
+    b = horizontal_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
+    val = np.max(np.linalg.norm(a - b, 1, axis=1))  # norm 1
+    print('offset_x is:', offset, ' norm=', val)
+    if val < min_val:
+        min_val = val
+        offset_x = offset
+
+print('The final offset_x is:', offset_x)
+
+min_val = 99999
+offset_y = 0
+for offset in range(-5, 5 + 1, 1):
+    a = vertical_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
+    b = vertical_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
+    val = np.max(np.linalg.norm(a - b, 1, axis=1))  # norm 1
+    print('offset_y is:', offset, ' norm=', val)
+    if val < min_val:
+        min_val = val
+        offset_y = offset
+
+print('The final offset_y is:', offset_y)
+
+# translation
+x = offset_x
+y = offset_y
 M = np.float32([[1, 0, x], [0, 1, y]])
 frame_intense_2 = cv2.warpAffine(frame_intense_2.astype(np.uint8), M, (width, height))
 # cv2.imshow("trans_img", frame_intense_2)
@@ -41,7 +86,6 @@ cv2.waitKey(0)
 # # ========== detect apriltags =============
 # cv2.imshow("code_org", frame)
 # cv2.waitKey(0)
-code_img_lab = code_img_lab[0:height, 0:int(width / 2)]
 detector = TagsDetector()
 flag, results = detector.detect(code_img_lab)
 if flag == True:
