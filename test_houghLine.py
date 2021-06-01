@@ -11,8 +11,11 @@ Description: file content
 import cv2
 import numpy as np
 import math
+# from apriltag import apriltag
 
 imgMor = cv2.imread("receiver_pictures/sub_close.png", cv2.IMREAD_GRAYSCALE)
+imgMor = 255 - imgMor
+
 imgHoughLines = imgMor.copy()
 imgHoughLinesP = imgMor.copy()
 
@@ -22,7 +25,7 @@ imgEdge = cv2.Canny(imgMor, 50, 150, apertureSize=3)
 # imgEdge = cv2.Sobel(imgMor, cv2.CV_64F, 1, 1, ksize=5).astype(np.uint8)
 
 # HoughLines
-lines = cv2.HoughLines(imgEdge, 1, np.pi / 180, 120, None, 0, 0)
+lines = cv2.HoughLines(imgEdge, 1, np.pi / 180, 130, None, 0, 0)
 if lines is not None:
     line_length = 1500
     for i in range(0, len(lines)):
@@ -36,7 +39,7 @@ if lines is not None:
         pt2 = (int(x0 - line_length * (-b)), int(y0 - line_length * (a)))
         cv2.line(imgHoughLines, pt1, pt2, 127, 2, cv2.LINE_AA)
 
-linesP = cv2.HoughLinesP(imgEdge, 1, np.pi / 180, 100, None, 200, 60)
+linesP = cv2.HoughLinesP(imgEdge, 1, np.pi / 180, 100, None, 100, 30)
 
 if linesP is not None:
     for i in range(0, len(linesP)):
