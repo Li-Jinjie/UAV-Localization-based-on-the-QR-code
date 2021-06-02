@@ -31,7 +31,7 @@ def decode(img, tag_corners_list, tag36h11):
         hamming, idx, rotate_degree = _find_min_hamming(int_code_list, tag36h11.codes)
         # e) filter invalid code and append result
         if hamming < 4:
-            lt_rt_rd_ld = np.rot90(tag_corners_list[i], int(rotate_degree / 90))
+            lt_rt_rd_ld = np.roll(tag_corners_list[i], -int(rotate_degree / 90), axis=0)
             result_list.append({'idx': idx, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
 
     return result_list
@@ -65,10 +65,10 @@ def _perspective_transform(img_mor, corners_list):
 def _rotate_get_int(tag, bit_x, bit_y):
     int_code_list = []
     for i in range(4):
-        tag = np.rot90(tag, i)
+        tag_rot = np.rot90(tag, i)
         code = '0b'
         for j in range(36):
-            if tag[bit_y[j], bit_x[j]] < 100:
+            if tag_rot[bit_y[j], bit_x[j]] < 127:
                 code = code + '0'
             else:
                 code = code + '1'
@@ -80,10 +80,13 @@ def _rotate_get_int(tag, bit_x, bit_y):
 def _find_min_hamming(int_code_list, tag36h11_list):
     hamming_min = 36
     id_min = 0
-    rotate_degree = 0
-    for int_code in int_code_list:
+    rot_idx_min = 0
+    # for different rotation angles
+    for rot_idx, int_code in enumerate(int_code_list):
         hamming_min_local = 36
         id_min_local = 0
+
+        # find the most likely tag id for this rotation angles
         for idx, tag_code in enumerate(tag36h11_list):
             s = str(bin(int_code ^ tag_code))
             hamming = 0
@@ -95,11 +98,12 @@ def _find_min_hamming(int_code_list, tag36h11_list):
                 id_min_local = idx
             if hamming_min_local == 0:
                 break
+
         if hamming_min > hamming_min_local:
             hamming_min = hamming_min_local
             id_min = id_min_local
+            rot_idx_min = rot_idx
         if hamming_min == 0:
             break
-        rotate_degree += 90
 
-    return hamming_min, id_min, rotate_degree
+    return hamming_min, id_min, 90 * rot_idx_min
