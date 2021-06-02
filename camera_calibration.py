@@ -13,6 +13,8 @@ import numpy as np
 import cv2 as cv
 import glob
 
+GRID_SIZE = 20  # mm
+
 path = "experiments_data_real\\20210530_full_data\\camera_calibration_data\\"
 
 # termination criteria
@@ -20,6 +22,7 @@ criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 objp = np.zeros((6 * 9, 3), np.float32)
 objp[:, :2] = np.mgrid[0:9, 0:6].T.reshape(-1, 2)
+objp = objp * GRID_SIZE
 # Arrays to store object points and image points from all the images.
 objpoints = []  # 3d point in real world space
 imgpoints = []  # 2d points in image plane.
@@ -44,5 +47,5 @@ cv.destroyAllWindows()
 ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
 # %%
-np.savez(path + 'GZ120', mtx=mtx, dist=dist)
+np.savez(path + 'GZ120_grid_size=20mm', mtx=mtx, dist=dist)
 print("Finish calibration!")
