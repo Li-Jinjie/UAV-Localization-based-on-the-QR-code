@@ -15,7 +15,7 @@ import glob
 
 GRID_SIZE = 20  # mm
 
-path = "experiments_data_real\\20210530_full_data\\camera_calibration_data\\"
+path = "data_real\\20210530_full_data\\camera_calibration_data\\"
 
 # termination criteria
 criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)

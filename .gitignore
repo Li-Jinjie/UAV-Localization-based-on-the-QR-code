@@ -143,5 +143,5 @@ archives/
 receiver_pictures/
 receiver_videos/
 sender_videos/
-experiments_data_real/
-experiments_data_sim/
+data_real/
+data_sim/

@@ -12,11 +12,11 @@ import cv2
 import numpy as np
 from projected_apriltag.detector import TagsDetector
 
-frame_1 = cv2.imread("experiments_data_real/receiver_pictures/1502.png")
+frame_1 = cv2.imread("data_real/receiver_pictures/1502.png")
 frame_Lab_1 = cv2.cvtColor(frame_1, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
 frame_intense_1 = frame_Lab_1[:, :, 0].astype(np.int32)
 
-frame_2 = cv2.imread("experiments_data_real/receiver_pictures/1503.png")
+frame_2 = cv2.imread("data_real/receiver_pictures/1503.png")
 frame_Lab_2 = cv2.cvtColor(frame_2, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
 frame_intense_2 = frame_Lab_2[:, :, 0].astype(np.int32)
 

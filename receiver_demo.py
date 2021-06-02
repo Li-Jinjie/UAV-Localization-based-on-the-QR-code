@@ -16,10 +16,13 @@ import copy
 # from apriltags_detector_findContour import TagsDetector
 from projected_apriltag.detector import TagsDetector
 
+
 def main():
-    detector = TagsDetector()
+    path_map = "D:\\ForGithub\\UAV-Localization-based-on-the-QR-code\\apriltag_map\\maps_info.yaml"
+    path_camera_para = "/data_real\\20210530_full_data\\camera_calibration_data\\GZ120_grid_size=20mm.npz"
+    detector = TagsDetector(path_map, path_camera_para)
     # ===== open a video =======
-    path = 'experiments_data_real/20210530_full_data/'
+    path = 'data_real/20210530_full_data/'
     video_name = '0530_color_120fps_L=4_9x9_noLight_720p_with_optitrack.avi'
     # video_name = '0517_color_120fps_80degree_720p.avi'
     cap = cv2.VideoCapture(path + video_name)
@@ -42,7 +45,7 @@ def main():
         if ret is True:
 
             # # ========== detect apriltags =============
-            if cnt > 750:
+            if cnt > 120:
                 # if detector.pass_flag > 0:
                 #     detector.pass_flag = - detector.pass_flag
                 #     continue
@@ -68,7 +71,6 @@ def main():
                 #
                 # cv2.imshow("code_sub", code_img_lab)
                 # cv2.waitKey(0)
-
 
                 flag, results = detector.detect(frame)
                 if flag == True:
