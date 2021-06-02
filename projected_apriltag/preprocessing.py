@@ -27,7 +27,7 @@ def get_lightness_ch(img, roi):
         return f_lightness_now
 
 
-def preprocess(f_lightness_pre, f_lightness_now, reverse_flag):
+def img_preprocess(f_lightness_pre, f_lightness_now, reverse_flag):
     # 1) align image and subtraction
     if f_lightness_pre is None:
         img_subtraction = f_lightness_now

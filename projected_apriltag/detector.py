@@ -12,7 +12,7 @@ Description: a new AprilTag detector class
 import cv2
 import numpy as np
 from .tag36h11 import Tag36H11
-from .preprocessing import get_lightness_ch, preprocess
+from .preprocessing import get_lightness_ch, img_preprocess
 from .finding_corners import find_corner_using_contours
 from .decoding import decode
 from .pose_estimation import PoseEstimator
@@ -35,7 +35,7 @@ class TagsDetector:
         self.tag36h11_info = Tag36H11()
 
         # to estimate pose
-        self.pose_estimator = PoseEstimator(path_map)
+        self.pose_estimator = PoseEstimator(path_map, self.cam_mtx, self.cam_dist)
 
         # last frame and frame information
         self.f_lightness_pre = None
@@ -56,6 +56,7 @@ class TagsDetector:
         if self.cam_dist is not None:
             if self.refine_cam_mtx_flag is False:
                 h, w = img.shape[0:2]
+                # cam_new_mtx is only used to undistort the image.
                 self.cam_new_mtx, self.roi = cv2.getOptimalNewCameraMatrix(self.cam_mtx, self.cam_dist, (w, h), 1,
                                                                            (w, h))
                 self.refine_cam_mtx_flag = True
@@ -73,11 +74,11 @@ class TagsDetector:
             return False, []
 
         # STEP 1: format conversion and preprocessing
-        # 1) convert BGR to Lab, get lightness channel, remove
+        # 1) convert BGR to Lab, get lightness channel, remove black borders caused by undistortion
         f_lightness_now = get_lightness_ch(img, self.roi)
 
-        # 2) preprocessing, including alignment, normalization, smoothing, threshold and morphology
-        img_mor, img_bw, img_sub_norm = preprocess(self.f_lightness_pre, f_lightness_now, self.reverse_flag)
+        # 2) img preprocessing, including alignment, normalization, smoothing, threshold and morphology
+        img_mor, img_bw, img_sub_norm = img_preprocess(self.f_lightness_pre, f_lightness_now, self.reverse_flag)
         self.f_lightness_pre = f_lightness_now
 
         # STEP 2: find corners
@@ -93,15 +94,15 @@ class TagsDetector:
         result_list = decode(img_bw, tag_corners_list, self.tag36h11_info)
 
         # ======= to display =========
-        imgFinal = img_sub_norm.copy()
+        img_final = img_sub_norm.copy()
         for tagCorners in tag_corners_list:
-            cv2.polylines(imgFinal, [tagCorners], True, 255)
+            cv2.polylines(img_final, [tagCorners], True, 255)
         for result in result_list:
             text = "idx:" + str(result["idx"]) + " hamming:" + str(result["hamming"])
             org = (result["lt_rt_rd_ld"][0, :].item(0), result["lt_rt_rd_ld"][0, :].item(1))
-            cv2.putText(imgFinal, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
+            cv2.putText(img_final, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
 
-        cv2.imshow("imgWithResults", imgFinal)
+        cv2.imshow("imgWithResults", img_final)
         cv2.waitKey(0)
 
         # STEP 4: update the flag
