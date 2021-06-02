@@ -44,5 +44,5 @@ cv.destroyAllWindows()
 ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
 # %%
-np.savez(path + 'GZ120', mtx, dist)
+np.savez(path + 'GZ120', mtx=mtx, dist=dist)
 print("Finish calibration!")
