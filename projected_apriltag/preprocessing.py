@@ -12,17 +12,28 @@ import numpy as np
 import cv2
 
 
-def preprocess(last_frame_lightness, img, reverse_flag):
-    # 1) convert BGR to Lab, alignment, subtraction, normalization
+def get_lightness_ch(img, roi):
     img_lab = cv2.cvtColor(img, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
-    img_lightness = img_lab[:, :, 0].astype(np.int32)
+    f_lightness_now = img_lab[:, :, 0].astype(np.int32)
+    if roi is not None:
+        h_org, w_org = img.shape[0:2]
+        mask = np.ones((h_org, w_org), dtype=np.bool)
+        x, y, w, h = roi
+        mask[y:y + h, x:x + w] = False
+        # cv2.imshow('f_lightness_now', f_lightness_now.astype(np.uint8))
+        f_lightness_now[mask] = 127
+        # cv2.imshow('f_lightness_now_masked', f_lightness_now.astype(np.uint8))
+        # cv2.waitKey(0)
+        return f_lightness_now
 
-    # 2) align image and subtraction
-    if last_frame_lightness is None:
-        img_subtraction = img_lightness
+
+def preprocess(f_lightness_pre, f_lightness_now, reverse_flag):
+    # 1) align image and subtraction
+    if f_lightness_pre is None:
+        img_subtraction = f_lightness_now
     else:
-        frame_now_aligned, offset_x, offset_y = _align_frames(last_frame_lightness, img_lightness)
-        img_subtraction = frame_now_aligned - last_frame_lightness
+        frame_now_aligned, offset_x, offset_y = _align_frames(f_lightness_pre, f_lightness_now)
+        img_subtraction = frame_now_aligned - f_lightness_pre
         # remove the outer black border
         if offset_x != 0:
             img_subtraction[:, 0:np.abs(offset_x)] = 0
@@ -31,12 +42,11 @@ def preprocess(last_frame_lightness, img, reverse_flag):
             img_subtraction[0:np.abs(offset_y), :] = 0
             img_subtraction[-np.abs(offset_y):, :] = 0
 
-
-    # 3) normalization
+    # 2) normalization
     img_sub_norm = ((img_subtraction - np.min(img_subtraction)) * 255 / (
             np.max(img_subtraction) - np.min(img_subtraction))).astype(np.uint8)
 
-    # 4) smoothing and threshold
+    # 3) smoothing and threshold
     median_value = np.median(img_sub_norm)
     img_smooth = cv2.blur(img_sub_norm, (5, 5))
     _, img_bw = cv2.threshold(img_smooth, median_value, 255, cv2.THRESH_BINARY)  # extremely critical
@@ -54,7 +64,7 @@ def preprocess(last_frame_lightness, img, reverse_flag):
     img_bw = cv2.medianBlur(img_bw, 5)
     # cv2.imshow("median_blur", img_bw)
 
-    # 5) morphology
+    # 4) morphology
     #  Morphology open, to remove some noise.
     kernel = np.ones((6, 6), np.uint8)
     img_mor = cv2.morphologyEx(img_bw, cv2.MORPH_OPEN, kernel)
@@ -64,7 +74,7 @@ def preprocess(last_frame_lightness, img, reverse_flag):
     img_mor = cv2.morphologyEx(img_mor, cv2.MORPH_CLOSE, kernel)
     # cv2.imshow("close", img_mor)
     # cv2.waitKey(0)
-    return img_mor, img_bw, img_sub_norm, img_lightness
+    return img_mor, img_bw, img_sub_norm
 
 
 def _align_frames(frame_pre, frame_now):
