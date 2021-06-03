@@ -25,8 +25,10 @@ class PoseEstimator:
             self.layout = map_info['layout']
 
     def pose_estimate(self, result_list):
-        # result_list.append({'idx': idx, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
-        for result in result_list:
+        # result_list: {'idx': idx, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
+        xyz_set = np.zeros([3, len(result_list)])
+        
+        for i, result in enumerate(result_list):
             idx = result['idx']
             obj_pts = self.lookup_map(idx)  # 3D points   size: 1 * 4*3
             obj_pts *= 1000  # from meter to mm
@@ -35,11 +37,13 @@ class PoseEstimator:
             ret, rvec, tvec = cv2.solvePnP(obj_pts, img_pts, self.cam_mtx, self.cam_dist,
                                            flags=cv2.SOLVEPNP_IPPE_SQUARE)
             if ret is True:
-                print("idx =", idx)
-                print("lt_rt_rd_ld, img_pts =", img_pts)
-                print("lt_rt_rd_ld, obj_pts =", obj_pts)
-                print("x,y,z =", tvec)
-        pass
+                xyz_set[:, i:i+1] = tvec
+                # print("idx =", idx)
+                # print("lt_rt_rd_ld, img_pts =", img_pts)
+                # print("lt_rt_rd_ld, obj_pts =", obj_pts)
+                # print("x,y,z =", tvec)
+
+        return xyz_set
 
     def lookup_map(self, idx):
         tag_dict = self.layout[idx]

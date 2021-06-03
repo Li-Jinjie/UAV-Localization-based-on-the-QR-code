@@ -32,10 +32,10 @@ class TagsDetector:
             self.cam_dist = para['dist']
 
         # to decode
-        self.tag36h11_info = Tag36H11()
+        self._tag36h11_info = Tag36H11()
 
         # to estimate pose
-        self.pose_estimator = PoseEstimator(path_map, self.cam_mtx, self.cam_dist)
+        self._pose_estimator = PoseEstimator(path_map, self.cam_mtx, self.cam_dist)
 
         # last frame and frame information
         self.f_lightness_pre = None
@@ -50,7 +50,7 @@ class TagsDetector:
         """
         Detect the apriltags in the image.
         :param img:  BGR
-        :return self.tag_flag, result_list:
+        :return self.tag_flag, result_list, xyz:
         """
         # STEP 0: correcting distortion
         if self.cam_dist is not None:
@@ -91,19 +91,18 @@ class TagsDetector:
         # cv2.imshow("imgWithPoints", img_poly_lines)
 
         # STEP 3: decoding
-        result_list = decode(img_bw, tag_corners_list, self.tag36h11_info)
+        result_list = decode(img_bw, tag_corners_list, self._tag36h11_info)
 
-        # ======= to display =========
-        img_final = img_sub_norm.copy()
-        for tagCorners in tag_corners_list:
-            cv2.polylines(img_final, [tagCorners], True, 255)
-        for result in result_list:
-            text = "idx:" + str(result["idx"]) + " hamming:" + str(result["hamming"])
-            org = (result["lt_rt_rd_ld"][0, :].item(0), result["lt_rt_rd_ld"][0, :].item(1))
-            cv2.putText(img_final, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
-
-        cv2.imshow("imgWithResults", img_final)
-        cv2.waitKey(0)
+        # # ======= to display =========
+        # img_final = img_sub_norm.copy()
+        # for tagCorners in tag_corners_list:
+        #     cv2.polylines(img_final, [tagCorners], True, 255)
+        # for result in result_list:
+        #     text = "idx:" + str(result["idx"]) + " hamming:" + str(result["hamming"])
+        #     org = (result["lt_rt_rd_ld"][0, 0, 0], result["lt_rt_rd_ld"][0, 0, 1])
+        #     cv2.putText(img_final, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
+        # cv2.imshow("imgWithResults", img_final)
+        # cv2.waitKey(0)
 
         # STEP 4: update the flag
         if len(result_list) == 0:
@@ -113,12 +112,16 @@ class TagsDetector:
             self.reverse_flag = -1 * self.reverse_flag  # 下一张是反转的检测的
             self.pass_flag = - self.pass_flag  # 去除下一张
 
-        # STEP 5: pose estimation
-        if self.tag_exist_flag is True:
-            pose = self.pose_estimator.pose_estimate(result_list)
-            print(pose)
-
         return self.tag_exist_flag, result_list
+
+    def pose_estimate(self, tag_exist_flag, result_list):
+        # pose estimation and average calculation
+        xyz = np.zeros([3, 1])
+        if tag_exist_flag is True:
+            xyz_set = self._pose_estimator.pose_estimate(result_list)
+            xyz = np.mean(xyz_set, axis=1)
+            xyz = np.expand_dims(xyz, axis=1)
+        return xyz
 
 
 def imshow_img(name, img):

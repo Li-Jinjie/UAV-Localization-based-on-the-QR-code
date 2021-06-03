@@ -40,30 +40,53 @@ vertical_lines = [np.array([frame_intense_1[:, int(width * 1 / 4)],
                             frame_intense_2[:, int(width * 2 / 4)],
                             frame_intense_2[:, int(width * 3 / 4)]])]
 
-min_val = 99999
+# min_val = 99999
+# offset_x = 0
+# for offset in range(-5, 5 + 1, 1):
+#     a = horizontal_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
+#     b = horizontal_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
+#     val = np.max(np.linalg.norm(a - b, 1, axis=1))  # norm 1
+#     print('offset_x is:', offset, ' norm=', val)
+#     if val < min_val:
+#         min_val = val
+#         offset_x = offset
+#
+# print('The final offset_x is:', offset_x)
+#
+# min_val = 99999
+# offset_y = 0
+# for offset in range(-5, 5 + 1, 1):
+#     a = vertical_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
+#     b = vertical_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
+#     val = np.max(np.linalg.norm(a - b, 1, axis=1))  # norm 1
+#     print('offset_y is:', offset, ' norm=', val)
+#     if val < min_val:
+#         min_val = val
+#         offset_y = offset
+#
+# print('The final offset_y is:', offset_y)
+min_x_val = 99999
+min_y_val = 99999
 offset_x = 0
-for offset in range(-5, 5 + 1, 1):
-    a = horizontal_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
-    b = horizontal_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
-    val = np.max(np.linalg.norm(a - b, 1, axis=1))  # norm 1
-    print('offset_x is:', offset, ' norm=', val)
-    if val < min_val:
-        min_val = val
-        offset_x = offset
-
-print('The final offset_x is:', offset_x)
-
-min_val = 99999
 offset_y = 0
 for offset in range(-5, 5 + 1, 1):
-    a = vertical_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
-    b = vertical_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
-    val = np.max(np.linalg.norm(a - b, 1, axis=1))  # norm 1
-    print('offset_y is:', offset, ' norm=', val)
-    if val < min_val:
-        min_val = val
+    a_x = horizontal_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
+    b_x = horizontal_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
+    val_x = np.mean(np.linalg.norm(a_x - b_x, 1, axis=1))  # norm 1
+    # print('offset_x is:', offset, ' norm=', val_x)
+    if val_x < min_x_val:
+        min_x_val = val_x
+        offset_x = offset
+
+    a_y = vertical_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
+    b_y = vertical_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
+    val_y = np.mean(np.linalg.norm(a_y - b_y, 1, axis=1))  # norm 1
+    # print('offset_y is:', offset, ' norm=', val_y)
+    if val_y < min_y_val:
+        min_y_val = val_y
         offset_y = offset
 
+print('The final offset_x is:', offset_x)
 print('The final offset_y is:', offset_y)
 
 # translation
@@ -76,8 +99,6 @@ frame_intense_2 = frame_intense_2.astype(np.int32)
 # code_img = frame_Lab[:, :, 0] - org_frame_lightness
 sub_img = frame_intense_2 - frame_intense_1
 
-offset_x = -6
-offset_y = -6
 # remove the black border
 sub_img[0:np.abs(offset_y), :] = 0
 sub_img[-np.abs(offset_y):, :] = 0
