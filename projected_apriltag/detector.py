@@ -128,6 +128,7 @@ class ProjectedTagsDetector:
         estimate pose
         :param tag_exist_flag: if exist tags?
         :param result_list: detection result
+        :param estimate_method: 'average' or 'all_pts'
         :param ransac_flag: use SolvePnPRansac() or not? only useful when choose 'all_pts' methods
         :return rvec, tvec: [position and rotation vector] or [None, None]
         """
