@@ -27,11 +27,36 @@ class PoseEstimator:
 
     def estimate_pose(self, result_list, estimate_method='average', ransac_flag=True):
         # estimate_method: 'average', 'all_pts'
+        num_result = len(result_list)
         if estimate_method == 'average':
-            pass
+            # Method 1: use IPPE_SQUARE to estimate every tags' pose, then average
+            rvec_set = np.zeros([3, num_result])
+            tvec_set = np.zeros([3, num_result])
+            for i, result in enumerate(result_list):
+                idx = result.tag_id
+                obj_pts = self.lookup_map(idx)  # 3D points   size: 4*3
+                obj_pts *= 1000  # from meter to mm
+                obj_pts = np.expand_dims(obj_pts, axis=0)
+
+                # 2D image points   size: 4*2  counter-clock:ld_rd_rt_lt
+                img_pts = result.corners.astype(np.float64)
+                img_pts = img_pts[::-1, :]  # from counter-clockwise to clockwise to meet IPPE_SQUARE's requirement
+                img_pts = np.expand_dims(img_pts, axis=0)
+                ret, rvec, tvec = cv2.solvePnP(obj_pts, img_pts, self.cam_mtx, self.cam_dist,
+                                               flags=cv2.SOLVEPNP_IPPE_SQUARE)
+                if ret is True:
+                    rvec_set[:, i:i + 1] = rvec
+                    tvec_set[:, i:i + 1] = tvec
+
+            # in case some ret is False
+            valid_num = num_result - np.sum(
+                np.prod([[tvec_set[0] == 0], [tvec_set[1] == 0], [tvec_set[2] == 0]], axis=2))
+            return np.sum(rvec_set, axis=1) / valid_num, np.sum(tvec_set, axis=1) / valid_num
+
         elif estimate_method == 'all_pts':
-            obj_pts_set = np.zeros([1, len(result_list) * 4, 3])  # 3D points   size: 1*N *3
-            img_pts_set = np.zeros([1, len(result_list) * 4, 2])  # 2D image points   size: 1*N * 2
+            # Method 2: use IPPE to estimate all tags' pose at one time
+            obj_pts_set = np.zeros([1, num_result * 4, 3])  # 3D points   size: 1*N *3
+            img_pts_set = np.zeros([1, num_result * 4, 2])  # 2D image points   size: 1*N * 2
             for i, result in enumerate(result_list):
                 idx = result.tag_id
                 obj_pts = self.lookup_map(idx)  # 3D points   size: 4*3

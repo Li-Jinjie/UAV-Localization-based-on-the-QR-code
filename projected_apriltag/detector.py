@@ -22,6 +22,7 @@ from .pose_estimation import PoseEstimator
 class ProjectedTagsDetector:
 
     def __init__(self, path_map, path_calibration_para=None, use_official_detector=True):
+        # estimate_method: 'average' or 'all_pts'
         # to correct distortion
         self.cam_mtx = None
         self.cam_dist = None
@@ -98,7 +99,7 @@ class ProjectedTagsDetector:
         else:
             # my implementation
             # STEP 2: find corners
-            tag_corners_list = find_corner_using_contours(img_mor)  # TODO: try cv2.cornerSubPix() here
+            tag_corners_list = find_corner_using_contours(img_mor)
             # STEP 3: decoding
             results = decode(img_bw, tag_corners_list, self._tag36h11_info)
 
@@ -122,16 +123,18 @@ class ProjectedTagsDetector:
 
         return self.tag_exist_flag, results
 
-    def estimate_pose(self, tag_exist_flag, result_list):
+    def estimate_pose(self, tag_exist_flag, result_list, estimate_method='average', ransac_flag=True):
         """
         estimate pose
         :param tag_exist_flag: if exist tags?
         :param result_list: detection result
+        :param ransac_flag: use SolvePnPRansac() or not? only useful when choose 'all_pts' methods
         :return rvec, tvec: [position and rotation vector] or [None, None]
         """
         # pose estimation and validate the data
         if tag_exist_flag is True:
-            rvec, tvec = self._pose_estimator.estimate_pose(result_list)
+            rvec, tvec = self._pose_estimator.estimate_pose(result_list, estimate_method=estimate_method,
+                                                            ransac_flag=ransac_flag)
             return rvec, tvec
         return None, None
 

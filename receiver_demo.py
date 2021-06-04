@@ -34,7 +34,7 @@ def main():
     # out = cv2.VideoWriter('sender_videos/output_masked.avi', fourcc, 60.0, (int(org_width), int(org_height)))
 
     # ========= open a csv file =========
-    with open(path + 'data_tag_0530_0604_official_tmp.csv', mode='w', newline='') as f:
+    with open(path + 'data_tag_0530_0604_ofc_no_cor_test.csv', mode='w', newline='') as f:
         csv_writer = csv.writer(f, )
         time_start = time.time()
         cnt = 0
@@ -45,13 +45,13 @@ def main():
                 # # ========== detect apriltags =============
                 if cnt > -1:
                     flag, results = detector.detect(frame)
-                    xyz = detector.pose_estimate(flag, results)
-                    if flag is True:
+                    rvec, tvec = detector.estimate_pose(flag, results,estimate_method='average', ransac_flag=False)
+                    if tvec is not None:
                         # ========= write to a csv file =========
-                        csv_writer.writerow([cnt, cnt / fps, xyz.item(0), xyz.item(1), xyz.item(2)])
+                        csv_writer.writerow([cnt, cnt / fps, tvec.item(0), tvec.item(1), tvec.item(2)])
                         pass
 
-                        print("xyz=", xyz)
+                        print("xyz=", tvec)
                         # for i, result in enumerate(results):
                         #     print(result)
                         # print(str(len(results)) + ' apriltags are detected in total!')
