@@ -17,6 +17,7 @@ class PoseEstimator:
     def __init__(self, path, cam_mtx, cam_dist):
         self.cam_mtx = cam_mtx
         self.cam_dist = cam_dist
+
         with open(path, 'r') as file:
             map_info = yaml.load(file, Loader=yaml.FullLoader)
             self.unit = map_info['unit']
@@ -24,24 +25,35 @@ class PoseEstimator:
             self.height_num = map_info['height_num']
             self.layout = map_info['layout']
 
-    def estimate_pose(self, result_list):
-        obj_pts_set = np.zeros([1, len(result_list) * 4, 3])  # 3D points   size: 1*N *3
-        img_pts_set = np.zeros([1, len(result_list) * 4, 2])  # 2D image points   size: 1*N * 2
-        for i, result in enumerate(result_list):
-            idx = result.tag_id
-            obj_pts = self.lookup_map(idx)  # 3D points   size: 4*3
-            obj_pts *= 1000  # from meter to mm
-            obj_pts_set[:, 4 * i:4 * (i + 1), :] = obj_pts
-            # 2D image points   size: 4*2  counter-clock:ld_rd_rt_lt
-            img_pts = result.corners.astype(np.float64)
-            img_pts = img_pts[::-1, :]  # from counter-clockwise to clockwise to meet IPPE_SQUARE's requirement
-            img_pts_set[:, 4 * i:4 * (i + 1), :] = img_pts
+    def estimate_pose(self, result_list, estimate_method='average', ransac_flag=True):
+        # estimate_method: 'average', 'all_pts'
+        if estimate_method == 'average':
+            pass
+        elif estimate_method == 'all_pts':
+            obj_pts_set = np.zeros([1, len(result_list) * 4, 3])  # 3D points   size: 1*N *3
+            img_pts_set = np.zeros([1, len(result_list) * 4, 2])  # 2D image points   size: 1*N * 2
+            for i, result in enumerate(result_list):
+                idx = result.tag_id
+                obj_pts = self.lookup_map(idx)  # 3D points   size: 4*3
+                obj_pts *= 1000  # from meter to mm
+                obj_pts_set[:, 4 * i:4 * (i + 1), :] = obj_pts
+                # 2D image points   size: 4*2  counter-clock:ld_rd_rt_lt
+                img_pts = result.corners.astype(np.float64)
+                img_pts = img_pts[::-1, :]  # from counter-clockwise to clockwise to meet IPPE_SQUARE's requirement
+                img_pts_set[:, 4 * i:4 * (i + 1), :] = img_pts
+            if ransac_flag is True:
+                ret, rvec, tvec, inliers = cv2.solvePnPRansac(obj_pts_set, img_pts_set, self.cam_mtx, self.cam_dist,
+                                                              flags=cv2.SOLVEPNP_IPPE)
+            else:
+                ret, rvec, tvec = cv2.solvePnP(obj_pts_set, img_pts_set, self.cam_mtx, self.cam_dist,
+                                               flags=cv2.SOLVEPNP_IPPE)
 
-        ret, rvec, tvec = cv2.solvePnP(obj_pts_set, img_pts_set, self.cam_mtx, self.cam_dist,
-                                       flags=cv2.SOLVEPNP_IPPE)
-        if ret is True:
-            print('solvePnP() is True!')
-            return rvec, tvec
+            if ret is True:
+                print('solve PnP is True!')
+                return rvec, tvec
+        else:
+            raise ValueError("the parameter estimate_method should only be 'average' or 'all_pts'")
+
         return None, None
 
     def lookup_map(self, idx):
