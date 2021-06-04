@@ -14,13 +14,13 @@ import numpy as np
 import time
 import copy
 import csv
-from projected_apriltag.detector import TagsDetector
+from projected_apriltag.detector import ProjectedTagsDetector
 
 
 def main():
     path_map = "D:\\ForGithub\\UAV-Localization-based-on-the-QR-code\\apriltag_map\\maps_info.yaml"
     path_camera_para = "data_real\\20210530_full_data\\camera_calibration_data\\GZ120_grid_size=20mm.npz"
-    detector = TagsDetector(path_map, path_camera_para)
+    detector = ProjectedTagsDetector(path_map, path_camera_para, use_official_detector=True)
     # ========= open a video ============
     path = 'data_real/20210530_full_data/'
     video_name = '0530_color_120fps_L=4_9x9_noLight_720p_with_optitrack.avi'
@@ -34,7 +34,7 @@ def main():
     # out = cv2.VideoWriter('sender_videos/output_masked.avi', fourcc, 60.0, (int(org_width), int(org_height)))
 
     # ========= open a csv file =========
-    with open(path + 'data_tag_0530.csv', mode='w', newline='') as f:
+    with open(path + 'data_tag_0530_0604_official_detector.csv', mode='w', newline='') as f:
         csv_writer = csv.writer(f, )
         time_start = time.time()
         cnt = 0
@@ -47,9 +47,11 @@ def main():
                     flag, results = detector.detect(frame)
                     xyz = detector.pose_estimate(flag, results)
                     if flag is True:
+                        # ========= write to a csv file =========
                         csv_writer.writerow([cnt, cnt / fps, xyz.item(0), xyz.item(1), xyz.item(2)])
+                        pass
 
-                        # print("xyz=", xyz)
+                        print("xyz=", xyz)
                         # for i, result in enumerate(results):
                         #     print(result)
                         # print(str(len(results)) + ' apriltags are detected in total!')
@@ -64,7 +66,7 @@ def main():
             time_end = time.time()
         cap.release()
         print("Finished!")
-        print("Processing time: ", time_end - time_start)
+        print("Processing time: ", time_end - time_start, " s")
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ Description: a new AprilTag detector class
 
 import cv2
 import numpy as np
+from pupil_apriltags import Detector
 from .tag36h11 import Tag36H11
 from .preprocessing import get_lightness_ch, img_preprocess
 from .finding_corners import find_corner_using_contours
@@ -18,9 +19,9 @@ from .decoding import decode
 from .pose_estimation import PoseEstimator
 
 
-class TagsDetector:
+class ProjectedTagsDetector:
 
-    def __init__(self, path_map, path_calibration_para=None):
+    def __init__(self, path_map, path_calibration_para=None, use_official_detector=True):
         # to correct distortion
         self.cam_mtx = None
         self.cam_dist = None
@@ -41,6 +42,16 @@ class TagsDetector:
         self.f_lightness_pre = None
 
         # flags
+        self.use_official_detector = use_official_detector
+        if self.use_official_detector is True:
+            self.detector = Detector(families='tag36h11',
+                                     nthreads=1,
+                                     quad_decimate=2.0,
+                                     quad_sigma=0.0,
+                                     refine_edges=1,
+                                     decode_sharpening=0,
+                                     debug=0)
+
         self.refine_cam_mtx_flag = False
         self.tag_exist_flag = True
         self.reverse_flag = -1
@@ -50,7 +61,7 @@ class TagsDetector:
         """
         Detect the apriltags in the image.
         :param img:  BGR
-        :return self.tag_flag, result_list, xyz:
+        :return self.tag_flag, results, xyz:
         """
         # STEP 0: correcting distortion
         if self.cam_dist is not None:
@@ -81,44 +92,42 @@ class TagsDetector:
         img_mor, img_bw, img_sub_norm = img_preprocess(self.f_lightness_pre, f_lightness_now, self.reverse_flag)
         self.f_lightness_pre = f_lightness_now
 
-        # STEP 2: find corners
-        tag_corners_list = find_corner_using_contours(img_mor)
+        if self.use_official_detector is True:
+            # official one
+            results = self.detector.detect(img_mor, estimate_tag_pose=False)
+        else:
+            # my implementation
+            # STEP 2: find corners
+            tag_corners_list = find_corner_using_contours(img_mor)  # TODO: try cv2.cornerSubPix() here
+            # STEP 3: decoding
+            results = decode(img_bw, tag_corners_list, self._tag36h11_info)
 
-        # # ======= to display =========
-        # img_poly_lines = img_sub_norm.copy()
-        # for tagCorners in tag_corners_list:
-        #     cv2.polylines(img_poly_lines, [tagCorners], True, 255)
-        # cv2.imshow("imgWithPoints", img_poly_lines)
-
-        # STEP 3: decoding
-        result_list = decode(img_bw, tag_corners_list, self._tag36h11_info)
-
-        # # ======= to display =========
+        # ======= to display =========
         # img_final = img_sub_norm.copy()
-        # for tagCorners in tag_corners_list:
-        #     cv2.polylines(img_final, [tagCorners], True, 255)
-        # for result in result_list:
-        #     text = "idx:" + str(result["idx"]) + " hamming:" + str(result["hamming"])
-        #     org = (result["lt_rt_rd_ld"][0, 0, 0], result["lt_rt_rd_ld"][0, 0, 1])
+        # for result in results:
+        #     cv2.polylines(img_final, [result.corners.astype(np.int32)], True, 255)
+        #     text = 'tag_id:' + str(result.tag_id) + ' hamming:' + str(result.hamming)
+        #     org = (result.corners[-1, 0].astype(np.int32), result.corners[-1, 1].astype(np.int32))
         #     cv2.putText(img_final, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
         # cv2.imshow("imgWithResults", img_final)
         # cv2.waitKey(0)
 
         # STEP 4: update the flag
-        if len(result_list) == 0:
+        if len(results) == 0:
             self.tag_exist_flag = False
         else:
             self.tag_exist_flag = True
             self.reverse_flag = -1 * self.reverse_flag  # 下一张是反转的检测的
             self.pass_flag = - self.pass_flag  # 去除下一张
 
-        return self.tag_exist_flag, result_list
+        return self.tag_exist_flag, results
 
     def pose_estimate(self, tag_exist_flag, result_list):
-        # pose estimation and average calculation
+        # pose estimation and validate the data
         xyz = np.zeros([3, 1])
         if tag_exist_flag is True:
             xyz_set = self._pose_estimator.pose_estimate(result_list)
+            # TODO：根据数据本身的特点选择合适的数据
             xyz = np.mean(xyz_set, axis=1)
             xyz = np.expand_dims(xyz, axis=1)
         return xyz

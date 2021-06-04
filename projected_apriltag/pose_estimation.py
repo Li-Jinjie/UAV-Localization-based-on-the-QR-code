@@ -25,22 +25,23 @@ class PoseEstimator:
             self.layout = map_info['layout']
 
     def pose_estimate(self, result_list):
-        # result_list: {'idx': idx, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
+        # result_list: {'idx': idx, 'hamming': hamming, 'ld_rd_rt_lt': ld_rd_rt_lt})
         xyz_set = np.zeros([3, len(result_list)])
-        
-        for i, result in enumerate(result_list):
-            idx = result['idx']
-            obj_pts = self.lookup_map(idx)  # 3D points   size: 1 * 4*3
-            obj_pts *= 1000  # from meter to mm
-            img_pts = result['lt_rt_rd_ld'].astype(np.float64)  # 2D image points   size: [1,4,2] to 4*1*2
 
+        for i, result in enumerate(result_list):
+            idx = result.tag_id
+            obj_pts = self.lookup_map(idx)  # 3D points   size: 1*4 *3
+            obj_pts *= 1000  # from meter to mm
+            # 2D image points   size: 1*4 * 2  counter-clock:ld_rd_rt_lt
+            img_pts = np.expand_dims(result.corners.astype(np.float64), axis=0)
+            img_pts = img_pts[:, ::-1, :]  # from counter-clockwise to clockwise to meet IPPE_SQUARE's requirement
             ret, rvec, tvec = cv2.solvePnP(obj_pts, img_pts, self.cam_mtx, self.cam_dist,
                                            flags=cv2.SOLVEPNP_IPPE_SQUARE)
             if ret is True:
-                xyz_set[:, i:i+1] = tvec
+                xyz_set[:, i:i + 1] = tvec
                 # print("idx =", idx)
-                # print("lt_rt_rd_ld, img_pts =", img_pts)
-                # print("lt_rt_rd_ld, obj_pts =", obj_pts)
+                # print("ld_rd_rt_lt, img_pts =", img_pts)
+                # print("ld_rd_rt_lt, obj_pts =", obj_pts)
                 # print("x,y,z =", tvec)
 
         return xyz_set
@@ -55,6 +56,7 @@ class PoseEstimator:
         bias = tag_dict['size'] / 2
         x = tag_dict['x']
         y = tag_dict['y']
+        # this order is consistent with the required order of IPPE_SQUARE method.
         obj_pts = np.array([[x - bias, y + bias, 0],
                             [x + bias, y + bias, 0],
                             [x + bias, y - bias, 0],

@@ -10,6 +10,7 @@ Description: decoding apriltags
 '''
 import numpy as np
 import cv2
+from .detection_msg import Detection
 
 
 def decode(img, tag_corners_list, tag36h11):
@@ -18,35 +19,36 @@ def decode(img, tag_corners_list, tag36h11):
     :param img: image
     :param tag_corners_list: a list that contains the four corners' positions of all tags
     :param tag36h11: a class that stores tag36h11 information
-    :return result_list: a list that contains 'idx, hamming_distance, rotate_degree', should be refreshed every time
+    :return results: a list that contains 'idx, hamming_distance, rotate_degree', should be refreshed every time
     """
-    result_list = []
+    results = []
     # a) Perspective transform
     tags_list = _perspective_transform(img, tag_corners_list)
     # b) save data of tag36h11 in __init__()
     for i, tag in enumerate(tags_list):
-        # c) rotate the img and get four code
+        # c) counter-clockwise rotate the img and get four code
         int_code_list = _rotate_get_int(tag, tag36h11.bit_x, tag36h11.bit_y)
         # d) calculate the hamming distance and find the minimal one
         hamming, idx, rotate_degree = _find_min_hamming(int_code_list, tag36h11.codes)
         # e) filter invalid code and append result
-        if hamming < 4:
-            lt_rt_rd_ld = np.roll(tag_corners_list[i], -int(rotate_degree / 90), axis=0)
-            result_list.append({'idx': idx, 'hamming': hamming, 'lt_rt_rd_ld': lt_rt_rd_ld})
+        if hamming < 3:
+            # -1:counter-clockwise, +1: clockwise
+            ld_rd_rt_lt = np.roll(tag_corners_list[i], -int(rotate_degree / 90), axis=0)
+            results.append(Detection(b'tag36h11', idx, hamming, ld_rd_rt_lt))
 
-    return result_list
+    return results
 
 
 def _perspective_transform(img_mor, corners_list):
     tags_list = []
     size_pixel = 80
-    points2 = np.array([[0, 0], [size_pixel, 0], [size_pixel, size_pixel], [0, size_pixel]])  # lt_rt_rd_ld
+    # points2 = np.array([[0, 0], [size_pixel, 0], [size_pixel, size_pixel], [0, size_pixel]])  # lt_rt_rd_ld
+    points2 = np.array([[0, size_pixel], [size_pixel, size_pixel], [size_pixel, 0], [0, 0]])  # ld_rd_rt_lt
     for corners in corners_list:
         # cv2.polylines(img_mor, [corners], True, 127)
         # cv2.imshow("img_mor", img_mor)
         # cv2.waitKey(0)
 
-        corners = corners.squeeze()
         h, status = cv2.findHomography(corners, points2)
         qr_code = cv2.warpPerspective(img_mor, h, (size_pixel, size_pixel))
 

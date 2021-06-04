@@ -10,7 +10,7 @@ Description: file content
 '''
 import cv2
 import numpy as np
-from projected_apriltag.detector import TagsDetector
+from projected_apriltag.detector import ProjectedTagsDetector
 
 frame_1 = cv2.imread("data_real/receiver_pictures/1502.png")
 frame_Lab_1 = cv2.cvtColor(frame_1, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
@@ -114,7 +114,7 @@ cv2.waitKey(0)
 # # ========== detect apriltags =============
 # cv2.imshow("code_org", frame)
 # cv2.waitKey(0)
-detector = TagsDetector()
+detector = ProjectedTagsDetector()
 img = np.array([code_img_lab, code_img_lab, code_img_lab], dtype=np.uint8)
 img = img.transpose((1, 2, 0))
 flag, results = detector.detect(img)
