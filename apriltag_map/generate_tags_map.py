@@ -19,7 +19,8 @@ HEIGHT = 2160  # pixels of the whole map's height
 WIDTH = 1920  # pixels of the whole map's width
 
 METER_FLAG = False  # use meter or pixels
-BORDER = 0.2  # The length of one BLACK side. Unit: m 如果边长是1m，则这里就是比例。
+BORDER = 0.2  # The length of one BLACK+WHITE side. Unit: m 如果边长是1m，则这里就是比例。
+BORDER_BLACK = BORDER * 8 / 10  # The length of one BLACK+WHITE side.
 PIXELS_P_METER = 1000  # pixels per meter. 确认BORDER×PIXELS_P_METER是PIXELS_P_SIDE的整数倍
 
 PIXELS_P_SIDE = 10  # 原始二维码一边有几个像素
@@ -65,7 +66,8 @@ if __name__ == "__main__":
     center = np.array([heightAllP / 2, widthAllP / 2], dtype=int)
 
     origin = np.array([center[0] + (NUM_H - 1) / 2 * DISTANCE * PIXELS_P_METER + BORDER / 2 * PIXELS_P_METER - 1,
-                       center[1] - (NUM_W - 1) / 2 * DISTANCE * PIXELS_P_METER - BORDER / 2 * PIXELS_P_METER],dtype=int)
+                       center[1] - (NUM_W - 1) / 2 * DISTANCE * PIXELS_P_METER - BORDER / 2 * PIXELS_P_METER],
+                      dtype=int)
     # origin = np.array((widthAllP - 1 - WIDTH_OUT*PIXELS_P_METER,
     #                    WIDTH_OUT*PIXELS_P_METER))  # 是第一个二维码左下角的位置，左下为原点
 
@@ -112,6 +114,7 @@ if __name__ == "__main__":
     fp = open(txtName, 'w')
     fp.write("name: 'my_bundle',\nlayout:\n  [\n")
 
+    ratio = 0.18 / BORDER_BLACK  # 确定比例尺。实际一个二维码是180mm宽
     for i, name in enumerate(imgNames):
         originM = (-(NUM_W - 1) / 2 * DISTANCE, -(NUM_H - 1) /
                    2 * DISTANCE)  # 坐标变换，改成中间的二维码为原点
@@ -119,11 +122,11 @@ if __name__ == "__main__":
         dhM = int(i / NUM_H) * DISTANCE
         if i == AllNum - 1:
             text = "    {id: %d, size: %.2f, x: %.4f, y: %.4f, z: 0.0, qw: 1.0, qx: 0.0, qy: 0.0, qz: 0.0}\n  ]" % (
-                int(i), BORDER, originM[0] + dwM, originM[1] + dhM)
+                int(i), BORDER_BLACK * ratio, (originM[0] + dwM) * ratio, (originM[1] + dhM) * ratio)
             fp.writelines(text)
             break
         text = "    {id: %d, size: %.2f, x: %.4f, y: %.4f, z: 0.0, qw: 1.0, qx: 0.0, qy: 0.0, qz: 0.0},\n" % (
-            int(i), BORDER, originM[0] + dwM, originM[1] + dhM)
+            int(i), BORDER_BLACK * ratio, (originM[0] + dwM) * ratio, (originM[1] + dhM) * ratio)
         fp.writelines(text)
 
     fp.close()  # 不要忘记
