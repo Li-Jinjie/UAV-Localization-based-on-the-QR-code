@@ -24,27 +24,25 @@ class PoseEstimator:
             self.height_num = map_info['height_num']
             self.layout = map_info['layout']
 
-    def pose_estimate(self, result_list):
-        # result_list: {'idx': idx, 'hamming': hamming, 'ld_rd_rt_lt': ld_rd_rt_lt})
-        xyz_set = np.zeros([3, len(result_list)])
-
+    def estimate_pose(self, result_list):
+        obj_pts_set = np.zeros([1, len(result_list) * 4, 3])  # 3D points   size: 1*N *3
+        img_pts_set = np.zeros([1, len(result_list) * 4, 2])  # 2D image points   size: 1*N * 2
         for i, result in enumerate(result_list):
             idx = result.tag_id
-            obj_pts = self.lookup_map(idx)  # 3D points   size: 1*4 *3
+            obj_pts = self.lookup_map(idx)  # 3D points   size: 4*3
             obj_pts *= 1000  # from meter to mm
-            # 2D image points   size: 1*4 * 2  counter-clock:ld_rd_rt_lt
-            img_pts = np.expand_dims(result.corners.astype(np.float64), axis=0)
-            img_pts = img_pts[:, ::-1, :]  # from counter-clockwise to clockwise to meet IPPE_SQUARE's requirement
-            ret, rvec, tvec = cv2.solvePnP(obj_pts, img_pts, self.cam_mtx, self.cam_dist,
-                                           flags=cv2.SOLVEPNP_IPPE_SQUARE)
-            if ret is True:
-                xyz_set[:, i:i + 1] = tvec
-                # print("idx =", idx)
-                # print("ld_rd_rt_lt, img_pts =", img_pts)
-                # print("ld_rd_rt_lt, obj_pts =", obj_pts)
-                # print("x,y,z =", tvec)
+            obj_pts_set[:, 4 * i:4 * (i + 1), :] = obj_pts
+            # 2D image points   size: 4*2  counter-clock:ld_rd_rt_lt
+            img_pts = result.corners.astype(np.float64)
+            img_pts = img_pts[::-1, :]  # from counter-clockwise to clockwise to meet IPPE_SQUARE's requirement
+            img_pts_set[:, 4 * i:4 * (i + 1), :] = img_pts
 
-        return xyz_set
+        ret, rvec, tvec = cv2.solvePnP(obj_pts_set, img_pts_set, self.cam_mtx, self.cam_dist,
+                                       flags=cv2.SOLVEPNP_IPPE)
+        if ret is True:
+            print('solvePnP() is True!')
+            return rvec, tvec
+        return None, None
 
     def lookup_map(self, idx):
         tag_dict = self.layout[idx]
@@ -61,5 +59,4 @@ class PoseEstimator:
                             [x + bias, y + bias, 0],
                             [x + bias, y - bias, 0],
                             [x - bias, y - bias, 0]])
-        obj_pts = np.expand_dims(obj_pts, axis=0)
         return obj_pts

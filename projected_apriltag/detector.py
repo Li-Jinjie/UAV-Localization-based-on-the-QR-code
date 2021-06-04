@@ -122,15 +122,18 @@ class ProjectedTagsDetector:
 
         return self.tag_exist_flag, results
 
-    def pose_estimate(self, tag_exist_flag, result_list):
+    def estimate_pose(self, tag_exist_flag, result_list):
+        """
+        estimate pose
+        :param tag_exist_flag: if exist tags?
+        :param result_list: detection result
+        :return rvec, tvec: [position and rotation vector] or [None, None]
+        """
         # pose estimation and validate the data
-        xyz = np.zeros([3, 1])
         if tag_exist_flag is True:
-            xyz_set = self._pose_estimator.pose_estimate(result_list)
-            # TODO：根据数据本身的特点选择合适的数据
-            xyz = np.mean(xyz_set, axis=1)
-            xyz = np.expand_dims(xyz, axis=1)
-        return xyz
+            rvec, tvec = self._pose_estimator.estimate_pose(result_list)
+            return rvec, tvec
+        return None, None
 
 
 def imshow_img(name, img):
