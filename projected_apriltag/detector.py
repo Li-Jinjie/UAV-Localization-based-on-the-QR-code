@@ -64,18 +64,18 @@ class ProjectedTagsDetector:
         :return self.tag_flag, results, xyz:
         """
         # STEP 0: correcting distortion
-        if self.cam_dist is not None:
-            if self.refine_cam_mtx_flag is False:
-                h, w = img.shape[0:2]
-                # cam_new_mtx is only used to undistort the image.
-                self.cam_new_mtx, self.roi = cv2.getOptimalNewCameraMatrix(self.cam_mtx, self.cam_dist, (w, h), 1,
-                                                                           (w, h))
-                self.refine_cam_mtx_flag = True
-            img_undist = cv2.undistort(img, self.cam_mtx, self.cam_dist, None, self.cam_new_mtx)
-            # cv2.imshow('img', img)
-            # cv2.imshow('img_undist', img_undist)
-            # cv2.waitKey(0)
-            img = img_undist
+        # if self.cam_dist is not None:
+        #     if self.refine_cam_mtx_flag is False:
+        #         h, w = img.shape[0:2]
+        #         # cam_new_mtx is only used to undistort the image.
+        #         self.cam_new_mtx, self.roi = cv2.getOptimalNewCameraMatrix(self.cam_mtx, self.cam_dist, (w, h), 1,
+        #                                                                    (w, h))
+        #         self.refine_cam_mtx_flag = True
+        #     img_undist = cv2.undistort(img, self.cam_mtx, self.cam_dist, None, self.cam_new_mtx)
+        #     # cv2.imshow('img', img)
+        #     # cv2.imshow('img_undist', img_undist)
+        #     # cv2.waitKey(0)
+        #     img = img_undist
 
         # decide if pass and save the frame or not
         if self.pass_flag > 0:

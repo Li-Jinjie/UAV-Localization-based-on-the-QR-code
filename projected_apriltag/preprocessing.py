@@ -24,7 +24,8 @@ def get_lightness_ch(img, roi):
         f_lightness_now[mask] = 127
         # cv2.imshow('f_lightness_now_masked', f_lightness_now.astype(np.uint8))
         # cv2.waitKey(0)
-        return f_lightness_now
+
+    return f_lightness_now
 
 
 def img_preprocess(f_lightness_pre, f_lightness_now, reverse_flag):

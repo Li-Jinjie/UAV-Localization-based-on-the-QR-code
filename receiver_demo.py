@@ -34,7 +34,7 @@ def main():
     # out = cv2.VideoWriter('sender_videos/output_masked.avi', fourcc, 60.0, (int(org_width), int(org_height)))
 
     # ========= open a csv file =========
-    with open(path + 'data_tag_0530_0604_official_detector.csv', mode='w', newline='') as f:
+    with open(path + 'data_tag_0530_0604_official_tmp.csv', mode='w', newline='') as f:
         csv_writer = csv.writer(f, )
         time_start = time.time()
         cnt = 0

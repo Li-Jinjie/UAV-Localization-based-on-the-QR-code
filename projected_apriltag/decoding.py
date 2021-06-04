@@ -32,8 +32,8 @@ def decode(img, tag_corners_list, tag36h11):
         hamming, idx, rotate_degree = _find_min_hamming(int_code_list, tag36h11.codes)
         # e) filter invalid code and append result
         if hamming < 3:
-            # -1:counter-clockwise, +1: clockwise
-            ld_rd_rt_lt = np.roll(tag_corners_list[i], -int(rotate_degree / 90), axis=0)
+            # angle: [+1:counter-clockwise, -1: clockwise]
+            ld_rd_rt_lt = np.roll(tag_corners_list[i], int(rotate_degree / 90), axis=0)
             results.append(Detection(b'tag36h11', idx, hamming, ld_rd_rt_lt))
 
     return results
