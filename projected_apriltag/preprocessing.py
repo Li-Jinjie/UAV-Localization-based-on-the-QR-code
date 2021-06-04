@@ -106,7 +106,7 @@ def _align_frames(frame_pre, frame_now):
     min_y_val = 99999
     offset_x = 0
     offset_y = 0
-    for offset in range(-5, 5 + 1, 1):   # TODO: check this, [-7, 7]?
+    for offset in range(-5, 5 + 1, 1):  # TODO: check this, [-7, 7]?
         a_x = horizontal_lines[0][:, max(offset, 0):-1 + min(offset, 0)]
         b_x = horizontal_lines[1][:, max(-offset, 0):-1 + min(-offset, 0)]
         val_x = np.mean(np.linalg.norm(a_x - b_x, 1, axis=1))  # norm 1

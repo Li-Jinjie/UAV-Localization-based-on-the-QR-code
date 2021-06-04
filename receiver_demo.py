@@ -45,7 +45,7 @@ def main():
                 # # ========== detect apriltags =============
                 if cnt > -1:
                     flag, results = detector.detect(frame)
-                    rvec, tvec = detector.estimate_pose(flag, results,estimate_method='average', ransac_flag=False)
+                    rvec, tvec = detector.estimate_pose(flag, results, estimate_method='average', ransac_flag=False)
                     if tvec is not None:
                         # ========= write to a csv file =========
                         csv_writer.writerow([cnt, cnt / fps, tvec.item(0), tvec.item(1), tvec.item(2)])
