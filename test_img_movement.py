@@ -10,7 +10,7 @@ Description: file content
 '''
 import cv2
 import numpy as np
-from projected_apriltag.detector import ProjectedTagsDetector
+from projected_tag.detector import ProjectedTagsDetector
 
 frame_1 = cv2.imread("data_real/receiver_pictures/1502.png")
 frame_Lab_1 = cv2.cvtColor(frame_1, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB

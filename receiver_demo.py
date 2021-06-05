@@ -14,11 +14,11 @@ import numpy as np
 import time
 import copy
 import csv
-from projected_apriltag.detector import ProjectedTagsDetector
+from projected_tag.detector import ProjectedTagsDetector
 
 
 def main():
-    path_map = "D:\\ForGithub\\UAV-Localization-based-on-the-QR-code\\apriltag_map\\maps_info.yaml"
+    path_map = "/tag_map\\maps_info.yaml"
     path_camera_para = "data_real\\20210530_full_data\\camera_calibration_data\\GZ120_grid_size=20mm.npz"
     detector = ProjectedTagsDetector(path_map, path_camera_para, use_official_detector=True)
     # ========= open a video ============

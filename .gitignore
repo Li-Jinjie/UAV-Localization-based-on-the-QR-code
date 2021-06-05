@@ -132,7 +132,7 @@ dmypy.json
 
 .idea/
 
-apriltag_map/Pictures/
+tag_map/Pictures/
 
 # videos
 *.mov

@@ -23,7 +23,7 @@ def main():
     video_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
     # ======== apriltags map related ============
-    apriltag_map = cv2.imread('apriltag_map/apriltagMap_9x9_1920.0000m.png', flags=cv2.IMREAD_GRAYSCALE)
+    apriltag_map = cv2.imread('tag_map/apriltagMap_9x9_1920.0000m.png', flags=cv2.IMREAD_GRAYSCALE)
     [height, width] = apriltag_map.shape
     map_mask = np.zeros([height, width], dtype=np.int32)
     # white: 255 > 1 black: 0 > -1 no color: 127 > 0
