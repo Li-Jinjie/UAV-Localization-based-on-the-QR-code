@@ -103,16 +103,6 @@ class ProjectedTagsDetector:
             # STEP 3: decoding
             results = decode(img_bw, tag_corners_list, self._tag36h11_info)
 
-        # ======= to display =========
-        # img_final = img_sub_norm.copy()
-        # for result in results:
-        #     cv2.polylines(img_final, [result.corners.astype(np.int32)], True, 255)
-        #     text = 'tag_id:' + str(result.tag_id) + ' hamming:' + str(result.hamming)
-        #     org = (result.corners[-1, 0].astype(np.int32), result.corners[-1, 1].astype(np.int32))
-        #     cv2.putText(img_final, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
-        # cv2.imshow("imgWithResults", img_final)
-        # cv2.waitKey(0)
-
         # STEP 4: update the flag
         if len(results) == 0:
             self.tag_exist_flag = False
@@ -120,6 +110,50 @@ class ProjectedTagsDetector:
             self.tag_exist_flag = True
             self.reverse_flag = -1 * self.reverse_flag  # 下一张是反转的检测的
             self.pass_flag = - self.pass_flag  # 去除下一张
+
+        # # ======= to display =========
+        # if self.tag_exist_flag is True:
+        #     cv2.imshow("img_org", img)
+        #     cv2.imshow("shake_elimination", img_sub_norm)
+        #     cv2.imshow("img_preprocessing", img_mor)
+        #
+        #     img_quads_detect = img_sub_norm.copy()
+        #     for result in results:
+        #         cv2.polylines(img_quads_detect, [result.corners.astype(np.int32)], True, 255)
+        #         # text = 'tag_id:' + str(result.tag_id) + ' hamming:' + str(result.hamming)
+        #         # org = (result.corners[-1, 0].astype(np.int32), result.corners[-1, 1].astype(np.int32))
+        #         # cv2.putText(img_quads_detect, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 255)
+        #         for corner in result.corners.astype(np.int32):
+        #             img_quads_detect = cv2.circle(img_quads_detect, tuple(corner), 6, 255, -1)
+        #     cv2.imshow("quads detection", img_quads_detect)
+        #
+        #     img_final_3 = np.zeros_like(img)
+        #     img_final_3[:, :, 0] = img_sub_norm
+        #     img_final_3[:, :, 1] = img_sub_norm
+        #     img_final_3[:, :, 2] = img_sub_norm
+        #
+        #     for result in results:
+        #         corners = result.corners.astype(np.int32)
+        #         cv2.polylines(img_final_3, [corners], True, (255, 0, 0), 3)
+        #         img_final_3 = cv2.line(img_final_3, tuple(corners[0, :].ravel()),
+        #                                tuple(corners[1, :].ravel()), (0, 0, 255), 3)  # red for x axis
+        #         img_final_3 = cv2.line(img_final_3, tuple(corners[0, :].ravel()),
+        #                                tuple(corners[-1, :].ravel()), (0, 255, 0), 3)  # green for y axis
+        #         # text = 'tag_id:' + str(result.tag_id) + ' hamming:' + str(result.hamming)
+        #         text = str(result.tag_id)
+        #         org = (np.mean(result.corners[:, 0]).astype(np.int32) - 40,
+        #                np.mean(result.corners[:, 1]).astype(np.int32) + 30)
+        #         cv2.putText(img_final_3, text, org, cv2.FONT_HERSHEY_SIMPLEX, 2.5, (255, 255, 255), 5)
+        #     cv2.imshow("final", img_final_3)
+        #
+        #     cv2.waitKey(0)
+        #     # ---- save images ------
+        #     cv2.imwrite("img_org.png", img)
+        #     cv2.imwrite("shake_elimination.png", img_sub_norm)
+        #     cv2.imwrite("img_preprocessing.png", img_mor)
+        #     cv2.imwrite("quads_detection.png", img_quads_detect)
+        #     cv2.imwrite("final_result.png", img_final_3)
+
 
         return self.tag_exist_flag, results
 
