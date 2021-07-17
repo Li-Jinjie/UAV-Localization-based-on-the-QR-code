@@ -12,7 +12,7 @@ import numpy as np
 import cv2
 
 
-def get_lightness_ch(img, roi):
+def get_lightness_ch(img, roi=None):
     img_lab = cv2.cvtColor(img, code=cv2.COLOR_BGR2Lab)  # transform from BGR to LAB
     f_lightness_now = img_lab[:, :, 0].astype(np.int32)
     if roi is not None:

@@ -17,11 +17,13 @@ from .preprocessing import get_lightness_ch, img_preprocess
 from .finding_corners import find_corner_using_contours
 from .decoding import decode
 from .pose_estimation import PoseEstimator
+from .detection_msg import Detection
 
 
 class ProjectedTagsDetector:
 
-    def __init__(self, path_map, path_calibration_para=None, use_official_detector=True):
+    def __init__(self, path_map, path_calibration_para=None, detector_type='AprilTag3'):
+        # detector_type: 'AprilTag3', 'ByMe', 'ArUcoOpenCV'
         # estimate_method: 'average' or 'all_pts'
         # to correct distortion
         self.cam_mtx = None
@@ -43,8 +45,8 @@ class ProjectedTagsDetector:
         self.f_lightness_pre = None
 
         # flags
-        self.use_official_detector = use_official_detector
-        if self.use_official_detector is True:
+        self.detector_type = detector_type
+        if self.detector_type == 'AprilTag3':
             self.detector = Detector(families='tag36h11',
                                      nthreads=1,
                                      quad_decimate=2.0,
@@ -52,6 +54,9 @@ class ProjectedTagsDetector:
                                      refine_edges=1,
                                      decode_sharpening=0,
                                      debug=0)
+        elif self.detector_type == 'ArUcoOpenCV':
+            self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_APRILTAG_36h11)
+            self.aruco_params = cv2.aruco.DetectorParameters_create()
 
         self.refine_cam_mtx_flag = False
         self.tag_exist_flag = True
@@ -91,17 +96,37 @@ class ProjectedTagsDetector:
 
         # 2) img preprocessing, including alignment, normalization, smoothing, threshold and morphology
         img_mor, img_bw, img_sub_norm = img_preprocess(self.f_lightness_pre, f_lightness_now, self.reverse_flag)
+
+        # # TODO: delete the following code when execution, because they are used for display the effect of shake elimination
+        # f_lightness_no_align = get_lightness_ch(img)
+        # if self.f_lightness_pre is not None:
+        #     img_sub_no_align = f_lightness_no_align - self.f_lightness_pre
+        #     img_sub_no_align = ((img_sub_no_align - np.min(img_sub_no_align)) * 255 / (
+        #             np.max(img_sub_no_align) - np.min(img_sub_no_align))).astype(np.uint8)
+        # else:
+        #     img_sub_no_align = f_lightness_no_align
+        # #######################################################
+
         self.f_lightness_pre = f_lightness_now
 
-        if self.use_official_detector is True:
+        if self.detector_type == 'AprilTag3':
             # official one
             results = self.detector.detect(img_mor, estimate_tag_pose=False)
-        else:
+        elif self.detector_type == 'ByMe':
             # my implementation
             # STEP 2: find corners
             tag_corners_list = find_corner_using_contours(img_mor)
             # STEP 3: decoding
             results = decode(img_bw, tag_corners_list, self._tag36h11_info)
+        elif self.detector_type == 'ArUcoOpenCV':
+            (corners_set, ids, _) = cv2.aruco.detectMarkers(img_mor, self.aruco_dict, parameters=self.aruco_params)
+            # The order of the corners in their ORIGINAL order (which is clockwise starting with top left), no rotation
+            # corners should be adjusted in the counter-clockwise order: ld_rd_rt_lt, [4, 2]
+
+            results = []
+            for i in range(len(corners_set)):
+                results.append(Detection(b'tag36h11', ids[i].item(), -1, corners_set[i][0, :, :]))
+                print(corners_set[i][:, ::-1, :])
 
         # STEP 4: update the flag
         if len(results) == 0:
@@ -127,6 +152,7 @@ class ProjectedTagsDetector:
         #             img_quads_detect = cv2.circle(img_quads_detect, tuple(corner), 6, 255, -1)
         #     cv2.imshow("quads detection", img_quads_detect)
         #
+        # # --------- final results ---------
         #     img_final_3 = np.zeros_like(img)
         #     img_final_3[:, :, 0] = img_sub_norm
         #     img_final_3[:, :, 1] = img_sub_norm
@@ -148,12 +174,12 @@ class ProjectedTagsDetector:
         #
         #     cv2.waitKey(0)
         #     # ---- save images ------
-        #     cv2.imwrite("img_org.png", img)
-        #     cv2.imwrite("shake_elimination.png", img_sub_norm)
-        #     cv2.imwrite("img_preprocessing.png", img_mor)
-        #     cv2.imwrite("quads_detection.png", img_quads_detect)
-        #     cv2.imwrite("final_result.png", img_final_3)
-
+        #     cv2.imwrite("1_img_org.png", img)
+        #     cv2.imwrite("2_img_no_alignment.png", img_sub_no_align)
+        #     cv2.imwrite("3_shake_elimination.png", img_sub_norm)
+        #     cv2.imwrite("4_img_preprocessing.png", img_mor)
+        #     # cv2.imwrite("quads_detection.png", img_quads_detect)
+        #     cv2.imwrite("5_final_result.png", img_final_3)
 
         return self.tag_exist_flag, results
 
