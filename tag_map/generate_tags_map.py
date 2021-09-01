@@ -14,6 +14,7 @@
 import os
 import numpy as np
 import cv2
+import json
 
 HEIGHT = 2160  # pixels of the whole map's height
 WIDTH = 1920  # pixels of the whole map's width
@@ -110,9 +111,11 @@ if __name__ == "__main__":
                 (NUM_W, NUM_H, WIDTH), imgTag)
 
     # =================制作文本=================
-    txtName = 'apriltagMapInfo_%dx%d_%.4fm.txt' % (NUM_W, NUM_H, WIDTH)
+    txtName = 'apriltagMapInfo_%dx%d_%.4fm.json' % (NUM_W, NUM_H, WIDTH)
     fp = open(txtName, 'w')
-    fp.write("name: 'my_bundle',\nlayout:\n  [\n")
+    tag_info = dict(name="map", unit="meter", width_num=NUM_W, height_num=NUM_H)
+
+    layout = []
 
     ratio = 0.18 / BORDER_BLACK  # 确定比例尺。实际一个二维码是180mm宽
     for i, name in enumerate(imgNames):
@@ -120,13 +123,14 @@ if __name__ == "__main__":
                    2 * DISTANCE)  # 坐标变换，改成中间的二维码为原点
         dwM = int(i % NUM_W) * DISTANCE
         dhM = int(i / NUM_H) * DISTANCE
+
+        layout.append(dict(id=int(i), size=BORDER_BLACK * ratio, x=round((originM[0] + dwM) * ratio, 4),
+                           y=round((originM[1] + dhM) * ratio, 4), z=0., qw=1.0, qx=0., qy=0., qz=0.))
         if i == AllNum - 1:
-            text = "    {id: %d, size: %.2f, x: %.4f, y: %.4f, z: 0.0, qw: 1.0, qx: 0.0, qy: 0.0, qz: 0.0}\n  ]" % (
-                int(i), BORDER_BLACK * ratio, (originM[0] + dwM) * ratio, (originM[1] + dhM) * ratio)
-            fp.writelines(text)
             break
-        text = "    {id: %d, size: %.2f, x: %.4f, y: %.4f, z: 0.0, qw: 1.0, qx: 0.0, qy: 0.0, qz: 0.0},\n" % (
-            int(i), BORDER_BLACK * ratio, (originM[0] + dwM) * ratio, (originM[1] + dhM) * ratio)
-        fp.writelines(text)
+
+    tag_info["layout"] = layout
+
+    fp.write(json.dumps(tag_info, indent=2))
 
     fp.close()  # 不要忘记
